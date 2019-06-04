@@ -12,3 +12,4 @@ Welcome to hellogit's documentation!
     :numbered: 1
     
     install_git
+    certificate_authority_for_https
