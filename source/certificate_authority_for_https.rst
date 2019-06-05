@@ -46,11 +46,11 @@ CA认证中心简介
 
 - 配置一个自己的CA认证中心,把FALSE改成TRUE,把本机变成CA认证中心
 
-修改/etc/pki/tls/openssl.cnf文件第172行::
+修改 ``/etc/pki/tls/openssl.cnf`` 文件第172行::
 
     [root@localhost ~]# sed -i '172s/basicConstraints=CA:FALSE/basicConstraints=CA:TRUE/g' /etc/pki/tls/openssl.cnf 
 
-修改完成后，/etc/pki/tls/openssl.cnf文件第172行处附近的内容如下::
+修改完成后， ``/etc/pki/tls/openssl.cnf`` 文件第172行处附近的内容如下::
 
     [root@server ~]# cat -n /etc/pki/tls/openssl.cnf |head -n 172|tail -n 8
        165  [ usr_cert ]
@@ -130,9 +130,9 @@ CA认证中心简介
 这里配置了CA认证中心，在里面就生成了CA认证根证书的私钥，在配置完结束之后，就会生成一个根证书，这个根证书中有这证书的公钥
 到此CA认证中心就搭建好了。
 
-- CA认证根证书文件/etc/pki/CA/cacert.pem
+- CA认证根证书文件 ``/etc/pki/CA/cacert.pem``
 
-查看/etc/pki/CA/cacert.pem文件内容::
+查看 ``/etc/pki/CA/cacert.pem`` 文件内容::
 
     [root@server ~]# cat -n /etc/pki/CA/cacert.pem
          1  Certificate:
@@ -218,9 +218,9 @@ CA认证中心简介
         81  -----END CERTIFICATE-----
     [root@server ~]# 
  
-- CA查看根证书的私钥/etc/pki/CA/private/cakey.pem
+- CA查看根证书的私钥 ``/etc/pki/CA/private/cakey.pem``
 
-查看根证书的私钥/etc/pki/CA/private/cakey.pem文件内容::    
+查看根证书的私钥 ``/etc/pki/CA/private/cakey.pem`` 文件内容::    
     
     [root@server ~]# ls -lah /etc/pki/CA/private/cakey.pem
     -rw-r--r--. 1 root root 1.8K Jun  5 06:43 /etc/pki/CA/private/cakey.pem
@@ -256,7 +256,631 @@ CA认证中心简介
         29  GBA=
         30  -----END ENCRYPTED PRIVATE KEY-----    
     
+在client客户端安装Apache WEB服务
+----------------------------------------
+
+安装Apache及wsgi支持::
+
+    [root@client ~]# yum install httpd -y     
+    Loaded plugins: fastestmirror
+    Loading mirror speeds from cached hostfile
+     * base: mirrors.163.com
+     * centos-sclo-rh: mirrors.163.com
+     * extras: mirrors.163.com
+     * updates: mirrors.aliyun.com
+    Resolving Dependencies
+    --> Running transaction check
+    ---> Package httpd.x86_64 0:2.4.6-89.el7.centos will be installed
+    --> Finished Dependency Resolution
+
+    Dependencies Resolved
+
+    ====================================================================================================================================
+     Package                    Arch                        Version                                  Repository                    Size
+    ====================================================================================================================================
+    Installing:
+     httpd                      x86_64                      2.4.6-89.el7.centos                      updates                      2.7 M
+
+    Transaction Summary
+    ====================================================================================================================================
+    Install  1 Package
+
+    Total download size: 2.7 M
+    Installed size: 9.4 M
+    Downloading packages:
+    httpd-2.4.6-89.el7.centos.x86_64.rpm                                                                         | 2.7 MB  00:00:01     
+    Running transaction check
+    Running transaction test
+    Transaction test succeeded
+    Running transaction
+      Installing : httpd-2.4.6-89.el7.centos.x86_64                                                                                 1/1 
+      Verifying  : httpd-2.4.6-89.el7.centos.x86_64                                                                                 1/1 
+
+    Installed:
+      httpd.x86_64 0:2.4.6-89.el7.centos                                                                                                
+
+    Complete!
+    [root@client ~]# 
     
+        [root@client ~]# yum install python36u-mod_wsgi httpd-devel -y
+    Loaded plugins: fastestmirror
+    Loading mirror speeds from cached hostfile
+     * base: mirrors.163.com
+     * centos-sclo-rh: mirrors.163.com
+     * extras: mirrors.163.com
+     * updates: mirrors.aliyun.com
+    Resolving Dependencies
+    --> Running transaction check
+    ---> Package httpd-devel.x86_64 0:2.4.6-89.el7.centos will be installed
+    ---> Package python36u-mod_wsgi.x86_64 0:4.6.2-1.ius.el7 will be installed
+    --> Finished Dependency Resolution
+
+    Dependencies Resolved
+
+    ====================================================================================================================================
+     Package                             Arch                    Version                                 Repository                Size
+    ====================================================================================================================================
+    Installing:
+     httpd-devel                         x86_64                  2.4.6-89.el7.centos                     updates                  196 k
+     python36u-mod_wsgi                  x86_64                  4.6.2-1.ius.el7                         ius                      473 k
+
+    Transaction Summary
+    ====================================================================================================================================
+    Install  2 Packages
+
+    Total download size: 669 k
+    Installed size: 1.8 M
+    Downloading packages:
+    (1/2): httpd-devel-2.4.6-89.el7.centos.x86_64.rpm                                                            | 196 kB  00:00:00     
+    (2/2): python36u-mod_wsgi-4.6.2-1.ius.el7.x86_64.rpm                                                         | 473 kB  00:00:03     
+    ------------------------------------------------------------------------------------------------------------------------------------
+    Total                                                                                               182 kB/s | 669 kB  00:00:03     
+    Running transaction check
+    Running transaction test
+    Transaction test succeeded
+    Running transaction
+      Installing : python36u-mod_wsgi-4.6.2-1.ius.el7.x86_64                                                                        1/2 
+      Installing : httpd-devel-2.4.6-89.el7.centos.x86_64                                                                           2/2 
+      Verifying  : httpd-devel-2.4.6-89.el7.centos.x86_64                                                                           1/2 
+      Verifying  : python36u-mod_wsgi-4.6.2-1.ius.el7.x86_64                                                                        2/2 
+
+    Installed:
+      httpd-devel.x86_64 0:2.4.6-89.el7.centos                        python36u-mod_wsgi.x86_64 0:4.6.2-1.ius.el7                       
+
+    Complete!
+
+修改httpd的配置文件，修改ServerName::
+
+    [root@client ~]# sed -i '95s/#ServerName www.example.com:80/ServerName 192.168.56.15:80/g' /etc/httpd/conf/httpd.conf    
+    [root@client ~]# cat -n /etc/httpd/conf/httpd.conf|head -n 95|tail -n 1
+    95  ServerName 192.168.56.15:80
+    
+设置开机启动并启动httpd服务::  
+
+    root@client ~]# systemctl enable httpd
+    Created symlink from /etc/systemd/system/multi-user.target.wants/httpd.service to /usr/lib/systemd/system/httpd.service.
+    [root@client ~]# systemctl start httpd 
+    [root@client ~]# systemctl status httpd
+    ● httpd.service - The Apache HTTP Server
+       Loaded: loaded (/usr/lib/systemd/system/httpd.service; enabled; vendor preset: disabled)
+       Active: active (running) since Wed 2019-06-05 20:37:42 CST; 5s ago
+         Docs: man:httpd(8)
+               man:apachectl(8)
+     Main PID: 13453 (httpd)
+       Status: "Processing requests..."
+        Tasks: 6
+       Memory: 22.7M
+       CGroup: /system.slice/httpd.service
+               ├─13453 /usr/sbin/httpd -DFOREGROUND
+               ├─13454 /usr/sbin/httpd -DFOREGROUND
+               ├─13455 /usr/sbin/httpd -DFOREGROUND
+               ├─13456 /usr/sbin/httpd -DFOREGROUND
+               ├─13457 /usr/sbin/httpd -DFOREGROUND
+               └─13458 /usr/sbin/httpd -DFOREGROUND
+
+    Jun 05 20:37:25 client.hopewait systemd[1]: Starting The Apache HTTP Server...
+    Jun 05 20:37:42 client.hopewait systemd[1]: Started The Apache HTTP Server.  
+
+防火墙开放80端口::
+
+    [root@client ~]# firewall-cmd --zone=public --add-port=80/tcp --permanent   
+    success
+    [root@client ~]# firewall-cmd --reload
+    success
+    [root@client ~]# firewall-cmd --list-all
+    public (active)
+      target: default
+      icmp-block-inversion: no
+      interfaces: enp0s3 enp0s8
+      sources: 
+      services: ssh dhcpv6-client
+      ports: 8140/tcp 53/tcp 11211/tcp 80/tcp
+      protocols: 
+      masquerade: no
+      forward-ports: 
+      source-ports: 
+      icmp-blocks: 
+      rich rules: 
+
+在浏览器中访问链接 http://192.168.56.15/ ，则可以看到Nginx的测试页:
+
+.. image:: ./_static/images/nginx_test.png
+
+现在我们能够正常访问httpd的服务，能正常访问80端口，我们在Client客户端配置CA证书，使httpd提供https加密服务。
+
+在client客户端生成请求证书文件
+----------------------------------------
+
+生成一个私钥密码::
+
+    [root@client ~]# mkdir cafiles
+    [root@client ~]# openssl genrsa -des3 -out ~/cafiles/server.key
+    Generating RSA private key, 2048 bit long modulus
+    ...............+++
+    .................................+++
+    e is 65537 (0x10001)
+    Enter pass phrase for /root/cafiles/server.key:    <--说明:  输入保护私钥的密码clientca
+    Verifying - Enter pass phrase for /root/cafiles/server.key:   <--说明:  再次输入保护私钥的密码clientca
+    [root@client ~]# ls -lah ~/cafiles
+    total 8.0K
+    drwxr-xr-x.  2 root root   24 Jun  5 20:58 .
+    dr-xr-x---. 14 root root 4.0K Jun  5 20:58 ..
+    -rw-r--r--.  1 root root 1.8K Jun  5 20:59 server.key
+
+
+查看私钥文件内容::
+
+    [root@client ~]# cat cafiles/server.key 
+    -----BEGIN RSA PRIVATE KEY-----
+    Proc-Type: 4,ENCRYPTED
+    DEK-Info: DES-EDE3-CBC,E38009EB74CF6AE9  <--说明:  这个地方进行了加密
+
+    I22V4W17mIUr5NAj4gQv5kID6QyFr2AUTOdzcyfeA9rT1FXzAV/r+29aZopcs8Bt
+    sHcoR/ZOXidyNQDqlEw5Wbu8UAcA/HZyqOpIsjNQlJnaUpHCc8ATQNo3E0HfDS4W
+    hLuStGZcoT4AsTbnaHEzkdN8X+ancBmQ2tLz0Hcc/LbTyZKycEXH1kE+PZauLroi
+    LK+hl279E4NjeHnjx6jOTe2ebhWjmDfW66U+aZD3Gxfyx7qalR/UclKi54Uy17kQ
+    uSslWWnzUVZoInuJs1fzMSA1iWkrPFPn8R9oOUWYCnyjNKBabmvQqLJbteA22OoJ
+    1ZlYrNoommCoOpNV9h8VO9B71Czh6Nf+rtNJ84c1tgUlGgdwGhDriXc+q8OpThqd
+    ELlmNUg+3LKJo21ZMNiX9LLCoaQnealYFI2N3u+vq0l9x4T5deghx3kMova2VF4Y
+    ng/NYPsfN7OlmJI/9dgzKJGCM+hESMB/99Xz0pNOUmK4IR+V8RAHLVd+yGE0JpV8
+    qZvZRT2RAiWLpY5Rx7G1u8CPnHJB1BocFbZ4L8/udreObso2HGWt+Kw0Y3rDr2mM
+    Exr7ZLkD1JsJzCLdC6Y+iQjw0/WyhoXBowyRtbvyvGEPVdU2lVUy7NzmnX7BIo+g
+    Kdej+II23ctZuaDPHl0fVhkgZBHg0hUsGjO0HbZzXRx95QJjtKGRzzkcBgJ+HbRX
+    RsK493ak3qhOb+w+0zb8Cgr/U6F6ALy9czUsgKVwzjpQmaF7ekOcMx/o872Pj89U
+    CcPavtZGjqAFpwnwPS3iRPR2Fxddhb6zqtfKN5IJqcvh5xHUtcSd4rUjjFtGI6sc
+    ozW8Rz0H7EMiBpxLAUGeNqoh2cfYGPcpzIlqc1pIPGY2NJf9GmlnfMKwo3OGaLFE
+    Or2UpvAzCuGQXwc1gNdTGLsmB7Ih8iLQdSuuMVh/cVWfmOX5ahpcd+SLl3rYwSHK
+    X9qvEq23jCwSbX1KcVncHFnkTyji7UMveFwsZArYA/zOIN61rXHgT2MvOZje6aR/
+    +i8e4buaZ1aMFM1enfRufJaq2ppW7de8sENnBnHt1U0pIAW6wTW9a3JQGKIvhf+F
+    rk2FN5w40IGHVCY2P5Wmn+3sfHrDD01rwaAojT9jV3YMfiQx3jnLjunbVbevb0Hn
+    hb3Hks3qYS3HDjU1pu+BUSUUQOgLkmp/g6ehxTbvHg8rXT75q/X04b+dw/oEVfdB
+    5ZDSVcoUNJZ3VjjxCfpgOim7t0qvqoRN6JQOq3kBH/CsJfAE++JfcmSrlyOnmAck
+    +uixe+wBSkTDs9N/22I7lBEDyli4DErlZdEBY2rRnfIH+guTmM8uG+P3wjIsX+M5
+    xJmBfc8qSno6IZQVxCDyRdIqpJmXYcjSNhWCcEWSUdvumkYFr8wvF/ljS1JIhI2I
+    OiyF9OuYwY2ny0LPRkrB0iD9CLGdP/H++NxOKaSgblBlTOYr2lyKAw3oqxtw4Hxl
+    dt+MMJozi78nEaAw5B49ezqWHe+ChkQcsAwJ3VfqIRPNSyv+Ji/E4Xsu3FNZTYRb
+    psll9JhUhSinvJ0qkCpRl/5FdbZYTDi7uXXVMoOENdprdMjg+THsXCvHs2sAE45y
+    -----END RSA PRIVATE KEY-----
+
+生成请求文件::
+
+    [root@client ~]# openssl req -new -key ~/cafiles/server.key -out ~/cafiles/server.csr
+    Enter pass phrase for /root/cafiles/server.key:    <--说明:  输入保护私钥的密码clientca
+    You are about to be asked to enter information that will be incorporated
+    into your certificate request.
+    What you are about to enter is what is called a Distinguished Name or a DN.
+    There are quite a few fields but you can leave some blank
+    For some fields there will be a default value,
+    If you enter '.', the field will be left blank.
+    -----
+    Country Name (2 letter code) [XX]:CN   <--说明: 国家地区名称，与前面的CA设置保持一致
+    State or Province Name (full name) []:hubei   <--说明: 省份名称，与前面的CA设置保持一致
+    Locality Name (eg, city) [Default City]:wuhan   <--说明: 地市名称，与前面的CA设置保持一致
+    Organization Name (eg, company) [Default Company Ltd]:IT  <--说明: 组织名称，可以理解为公司的部门，与前面的CA设置保持一致
+    Organizational Unit Name (eg, section) []:hopewait     <--说明:  输入组织单位名称，与前面的CA设置保持一致
+    Common Name (eg, your name or your server's hostname) []:192.168.56.15   <--说明:  输入通用名，与通过URL访问web的地址设置保持一致，有域名用域名，没域名用IP地址
+    Email Address []:mzh.whut@gmail.com    <--说明:  输入邮箱，可以与前面的CA设置不一致
+
+    Please enter the following 'extra' attributes
+    to be sent with your certificate request
+    A challenge password []:  <--说明:  回车
+    An optional company name []:  <--说明:  回车
+    [root@client ~]# 
+
+查看刚生成的请求文件::
+
+    [root@client ~]# ls -lah ~/cafiles/
+    total 12K
+    drwxr-xr-x.  2 root root   42 Jun  5 21:05 .
+    dr-xr-x---. 14 root root 4.0K Jun  5 20:58 ..
+    -rw-r--r--.  1 root root 1.1K Jun  5 21:05 server.csr
+    -rw-r--r--.  1 root root 1.8K Jun  5 20:59 server.key
+    [root@client ~]# cat -n ~/cafiles/server.csr 
+         1  -----BEGIN CERTIFICATE REQUEST-----
+         2  MIICzjCCAbYCAQAwgYgxCzAJBgNVBAYTAkNOMQ4wDAYDVQQIDAVodWJlaTEOMAwG
+         3  A1UEBwwFd3VoYW4xCzAJBgNVBAoMAklUMREwDwYDVQQLDAhob3Bld2FpdDEWMBQG
+         4  A1UEAwwNMTkyLjE2OC41Ni4xNTEhMB8GCSqGSIb3DQEJARYSbXpoLndodXRAZ21h
+         5  aWwuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2SPcNRvB8QBX
+         6  6ey05Wjf3P4AmXISwAYnt3DWw0WfmO8vXl5t0g5DAHoqQdK5hcL2DAAxHaTR2w+5
+         7  JsGKwGmrQulCrX3jmDcalKM2cUn3GoCZ0oHVTgV2iYDBoWTRn7yT4IIjGSGzFzf5
+         8  stGj1S8mK+X+F2TgairevZanZ08Qh3/Bm37vfI3FudiPq7A+AqyACtnEjGgnQCgG
+         9  XnsnmqsJpR15mRz93JpqZ/WTJrh/2pO9bWxGDM5vuZWr9T+1VMZr9R4RQqOqwopf
+        10  eBnZqEcE9lDf8/DeklbAIviXJLK3S9qbsspXbLchc4MUWnsSBOPBsdig9dQY7Vx5
+        11  s5sG1LqBZwIDAQABoAAwDQYJKoZIhvcNAQELBQADggEBAG5vN/IhhzbDvHgTdfhT
+        12  pgNqWmg4XCV1agh7m6CKcg+LcJLPixbW6EA/NU9QX4ARZJp501t7v/bFPiQ1/uEm
+        13  IrQqRnM4xGCdpVaY4Y1J21i8t1YoRZAOST9xgQe5nTwq2U1A1wyFJkKYgTFB5ou1
+        14  UlI4wELnYTUcrOr4V/4b3DTEZNNfCk6oWv4guQI9UpC+i9FNQb/NkcePkNsQeE4n
+        15  q1uM07C05+KMd/Lem6fLUlIDHlpI0iyhuQcSM1TJ1fKmF5uRQHTxIHnI5qqKbP5P
+        16  tPW9DLv577wM7W4jIUbEhYkKPLRFLFobITMQu9nDUyF3WEbFbMHvippnu7nxRvb2
+        17  OWQ=
+        18  -----END CERTIFICATE REQUEST-----
+    [root@client ~]# 
+
+
+在client客户端将请求证书文件发送给server服务端
+----------------------------------------------------------
+
+使用scp将请求证书文件发送到服务端::
+
+    [root@client ~]# scp ~/cafiles/server.csr root@192.168.56.14:/tmp
+    root@192.168.56.14's password:  <--说明:  输入服务端root账号密码
+    server.csr                                                                                        100% 1050   460.4KB/s   00:00    
+    [root@client ~]# 
+
+
+在server服务端对用户的请求文件进行CA签名
+----------------------------------------------------------
+
+查看用户的请求文件是否发送过来::
+
+    [root@server ~]#  ls -lah /tmp/server.csr
+    -rw-r--r--. 1 root root 1.1K Jun  5 21:12 /tmp/server.csr
+
+说明请求文件发送到服务端了。
+
+- CA认证中心进行CA签名，使用CA认证中心的私钥 ``/etc/pki/CA/private/cakey.pem`` 以及CA根证书 ``/etc/pki/CA/cacert.pem`` 对用户的请求文件 ``server.csr`` 进行签名。
+- days参数控制证书有效期，可以设置为365*2=730天，2年！
+
+CA认证中心对用户请求文件进行签名::
+
+    [root@server ~]# openssl ca -keyfile /etc/pki/CA/private/cakey.pem -cert /etc/pki/CA/cacert.pem -days 730 -in /tmp/server.csr -out /tmp/server.crt
+    Using configuration from /etc/pki/tls/openssl.cnf
+    Enter pass phrase for /etc/pki/CA/private/cakey.pem:    <--说明: 输入CA中心保护密钥的密码hellogit
+    Check that the request matches the signature
+    Signature ok
+    Certificate Details:
+            Serial Number:
+                a0:10:ec:4f:f7:db:f9:20
+            Validity
+                Not Before: Jun  5 13:21:44 2019 GMT
+                Not After : Jun  4 13:21:44 2021 GMT
+            Subject:
+                countryName               = CN
+                stateOrProvinceName       = hubei
+                organizationName          = IT
+                organizationalUnitName    = hopewait
+                commonName                = 192.168.56.15
+                emailAddress              = mzh.whut@gmail.com
+            X509v3 extensions:
+                X509v3 Basic Constraints: 
+                    CA:TRUE
+                Netscape Comment: 
+                    OpenSSL Generated Certificate
+                X509v3 Subject Key Identifier: 
+                    5D:39:25:F3:C3:DB:13:ED:6F:9C:C3:30:E8:5C:59:46:1D:6E:37:58
+                X509v3 Authority Key Identifier: 
+                    keyid:DF:1A:24:4F:9E:B4:BC:B4:2E:D3:B1:AD:1C:B3:79:9D:4A:B1:35:65
+
+    Certificate is to be certified until Jun  4 13:21:44 2021 GMT (730 days)
+    Sign the certificate? [y/n]:y    <--说明: 是否注册证书，输入y
+
+
+    1 out of 1 certificate requests certified, commit? [y/n]y   <--说明: 是否确认注册证书，输入y
+    Write out database with 1 new entries
+    Data Base Updated
+    [root@server ~]# 
+
+将CA中心的签名文件发送给用户::
+
+    [root@server ~]# ls -lah /tmp/server.c*
+    -rw-r--r--. 1 root root 4.6K Jun  5 21:21 /tmp/server.crt
+    -rw-r--r--. 1 root root 1.1K Jun  5 21:12 /tmp/server.csr
+    [root@server ~]# scp /tmp/server.crt root@192.168.56.15:/root/cafiles/
+    The authenticity of host '192.168.56.15 (192.168.56.15)' can't be established.
+    ECDSA key fingerprint is SHA256:7rw7b1vOEC5UmjDAbdIJ6SCK4aoGk5e+48vi3ubjdjE.
+    ECDSA key fingerprint is MD5:96:39:70:28:72:73:f5:34:61:6f:b6:37:da:90:58:48.
+    Are you sure you want to continue connecting (yes/no)? yes
+    Warning: Permanently added '192.168.56.15' (ECDSA) to the list of known hosts.
+    root@192.168.56.15's password: 
+    server.crt                                                                                        100% 4617     2.8MB/s   00:00    
+    [root@server ~]# 
+
+
+在client客户端使用CA中心颁发的证书文件配置https httpd web服务
+----------------------------------------------------------------
+
+查看CA中心发送过来的证书文件 ``server.crt`` ::
+
+    [root@client ~]# ls -lah ~/cafiles/
+    total 20K
+    drwxr-xr-x.  2 root root   60 Jun  5 21:28 .
+    dr-xr-x---. 14 root root 4.0K Jun  5 20:58 ..
+    -rw-r--r--.  1 root root 4.6K Jun  5 21:28 server.crt
+    -rw-r--r--.  1 root root 1.1K Jun  5 21:05 server.csr
+    -rw-r--r--.  1 root root 1.8K Jun  5 20:59 server.key
+    [root@client ~]# 
+
+说明已经有了证书文件。
+
+安装mod_ssl模块::
+
+    [root@client ~]# yum install mod_ssl -y
+    Loaded plugins: fastestmirror
+    Loading mirror speeds from cached hostfile
+     * base: mirrors.163.com
+     * centos-sclo-rh: mirrors.163.com
+     * extras: mirrors.huaweicloud.com
+     * updates: mirrors.163.com
+    Resolving Dependencies
+    --> Running transaction check
+    ---> Package mod_ssl.x86_64 1:2.4.6-89.el7.centos will be installed
+    --> Finished Dependency Resolution
+
+    Dependencies Resolved
+
+    ====================================================================================================================================
+     Package                     Arch                       Version                                   Repository                   Size
+    ====================================================================================================================================
+    Installing:
+     mod_ssl                     x86_64                     1:2.4.6-89.el7.centos                     updates                     112 k
+
+    Transaction Summary
+    ====================================================================================================================================
+    Install  1 Package
+
+    Total download size: 112 k
+    Installed size: 224 k
+    Downloading packages:
+    mod_ssl-2.4.6-89.el7.centos.x86_64.rpm                                                                       | 112 kB  00:00:00     
+    Running transaction check
+    Running transaction test
+    Transaction test succeeded
+    Running transaction
+      Installing : 1:mod_ssl-2.4.6-89.el7.centos.x86_64                                                                             1/1 
+      Verifying  : 1:mod_ssl-2.4.6-89.el7.centos.x86_64                                                                             1/1 
+
+    Installed:
+      mod_ssl.x86_64 1:2.4.6-89.el7.centos                                                                                              
+
+    Complete!
+    [root@client ~]# 
+    
+复制server.key和server.crt文件到etc/httpd/conf.d/目录下::
+
+    [root@client ~]# cp ~/cafiles/server.key /etc/httpd/conf.d/
+    [root@client ~]# cp ~/cafiles/server.crt /etc/httpd/conf.d/
+    [root@client ~]# ls -lah /etc/httpd/conf.d/
+    total 40K
+    drwxr-xr-x. 2 root root  134 Jun  5 22:03 .
+    drwxr-xr-x. 5 root root   92 Jun  5 20:32 ..
+    -rw-r--r--. 1 root root 2.9K Apr 24 21:45 autoindex.conf
+    -rw-r--r--. 1 root root  366 Apr 24 21:46 README
+    -rw-r--r--. 1 root root 4.6K Jun  5 22:03 server.crt
+    -rw-r--r--. 1 root root 1.8K Jun  5 22:03 server.key
+    -rw-r--r--. 1 root root 9.3K Jun  5 21:58 ssl.conf
+    -rw-r--r--. 1 root root 1.3K Apr 24 21:44 userdir.conf
+    -rw-r--r--. 1 root root  824 Apr 24 21:44 welcome.conf
+    [root@client ~]#    
+
+
+修改httpd的ssl配置文件 ``修改配置文件/etc/httpd/conf.d/ssl.conf`` ::
+
+    [root@client ~]# cat -n /etc/httpd/conf.d/ssl.conf|head -n 108|tail -n 14     <--说明:  配置文件原始内容
+        95  #   Server Certificate:
+        96  # Point SSLCertificateFile at a PEM encoded certificate.  If
+        97  # the certificate is encrypted, then you will be prompted for a
+        98  # pass phrase.  Note that a kill -HUP will prompt again.  A new
+        99  # certificate can be generated using the genkey(1) command.
+       100  SSLCertificateFile /etc/pki/tls/certs/localhost.crt     <--说明:  配置文件原始内容
+       101
+       102  #   Server Private Key:
+       103  #   If the key is not combined with the certificate, use this
+       104  #   directive to point at the key file.  Keep in mind that if
+       105  #   you've both a RSA and a DSA private key you can configure
+       106  #   both in parallel (to also allow the use of DSA ciphers, etc.)
+       107  SSLCertificateKeyFile /etc/pki/tls/private/localhost.key      <--说明:  配置文件原始内容
+       108
+    [root@client ~]#   
+     <--说明:  替换配置文件的内容  
+    [root@client ~]# sed -i '100s@SSLCertificateFile /etc/pki/tls/certs/localhost.crt@SSLCertificateFile /etc/httpd/conf.d/server.crt@g' /etc/httpd/conf.d/ssl.conf
+    [root@client ~]# sed -i '107s@SSLCertificateKeyFile /etc/pki/tls/private/localhost.key@SSLCertificateKeyFile /etc/httpd/conf.d/server.key@g' /etc/httpd/conf.d/ssl.conf
+    [root@client ~]# cat -n /etc/httpd/conf.d/ssl.conf|head -n 108|tail -n 14    <--说明:  配置文件修改后的内容
+        95  #   Server Certificate:
+        96  # Point SSLCertificateFile at a PEM encoded certificate.  If
+        97  # the certificate is encrypted, then you will be prompted for a
+        98  # pass phrase.  Note that a kill -HUP will prompt again.  A new
+        99  # certificate can be generated using the genkey(1) command.
+       100  SSLCertificateFile /etc/httpd/conf.d/server.crt      <--说明:  配置文件修改后的内容，指向CA中心颁发证书的路径
+       101
+       102  #   Server Private Key:
+       103  #   If the key is not combined with the certificate, use this
+       104  #   directive to point at the key file.  Keep in mind that if
+       105  #   you've both a RSA and a DSA private key you can configure
+       106  #   both in parallel (to also allow the use of DSA ciphers, etc.)
+       107  SSLCertificateKeyFile /etc/httpd/conf.d/server.key    <--说明:  配置文件修改后的内容，自己的私钥文件的路径
+       108
+    [root@client ~]#   
+
+奇怪的是，如果不将ca证书文件从~/cafiles复制到/etc/httpd/conf.d/目录下，启动httpd会失败，并报"SSLCertificateFile: file '/root/cafiles/server.crt' does not exist or is empty"异常。
+    
+    
+重启httpd服务::
+
+    [root@client ~]# systemctl restart httpd
+    Enter SSL pass phrase for 192.168.56.15:443 (RSA) : ********  <--说明:  需要输入保护私钥的密码clientca
+    [root@client ~]#  
+
+查看httpd服务启用的端口号::
+
+    [root@client ~]# netstat -tunlp|grep httpd
+    tcp6       0      0 :::80                   :::*                    LISTEN      14217/httpd         
+    tcp6       0      0 :::443                  :::*                    LISTEN      14217/httpd         
+    [root@client ~]#   
+
+发现已经开启了443端口，说明可以使用https协议。    
+    
+防火墙开放443端口::
+
+    [root@client ~]# firewall-cmd --zone=public  --add-port=443/tcp --permanent 
+    success
+    [root@client ~]# firewall-cmd --reload
+    success
+    [root@client ~]# firewall-cmd --list-all
+    public (active)
+      target: default
+      icmp-block-inversion: no
+      interfaces: enp0s3 enp0s8
+      sources: 
+      services: ssh dhcpv6-client
+      ports: 8140/tcp 53/tcp 11211/tcp 80/tcp 443/tcp
+      protocols: 
+      masquerade: no
+      forward-ports: 
+      source-ports: 
+      icmp-blocks: 
+      rich rules: 
+
+    [root@client ~]# 
+    
+ 
+在浏览器中访问 https://192.168.56.15/ ，可以正常访问，说明配置正常。
+
+
+Enter PEM pass phrase 处理
+------------------------------------------------------------
+
+解决每次重启httpd服务提示"Enter PEM pass phrase"需要输入保护私钥的密码的问题::
+
+    [root@client ~]# openssl rsa -in ~/cafiles/server.key -out ~/cafiles/server.key.unsecure  <-- 说明: 从server.key中剥离密码
+    Enter pass phrase for /root/cafiles/server.key:  <--说明:  需要输入保护私钥的密码clientca
+    writing RSA key
+    [root@client ~]# ls -lah ~/cafiles/
+    total 24K
+    drwxr-xr-x.  2 root root   87 Jun  5 22:25 .
+    dr-xr-x---. 14 root root 4.0K Jun  5 22:08 ..
+    -rw-r--r--.  1 root root 4.6K Jun  5 21:28 server.crt
+    -rw-r--r--.  1 root root 1.1K Jun  5 21:05 server.csr
+    -rw-r--r--.  1 root root 1.8K Jun  5 20:59 server.key
+    -rw-r--r--.  1 root root 1.7K Jun  5 22:25 server.key.unsecure
+    [root@client ~]# cp ~/cafiles/server.key.unsecure /etc/httpd/conf.d/
+    [root@client ~]# ls -lah /etc/httpd/conf.d/server.*
+    -rw-r--r--. 1 root root 4.6K Jun  5 22:03 /etc/httpd/conf.d/server.crt
+    -rw-r--r--. 1 root root 1.8K Jun  5 22:03 /etc/httpd/conf.d/server.key
+    -rw-r--r--. 1 root root 1.7K Jun  5 22:26 /etc/httpd/conf.d/server.key.unsecure
+    [root@client ~]# 
+
+修改配置文件 ``/etc/httpd/conf.d/ssl.conf`` 中的server.key 为 ``server.key.unsecure`` ,修改后显示如下 ::
+
+    [root@client ~]# cat -n /etc/httpd/conf.d/ssl.conf|head -n 108|tail -n 14 
+        95  #   Server Certificate:
+        96  # Point SSLCertificateFile at a PEM encoded certificate.  If
+        97  # the certificate is encrypted, then you will be prompted for a
+        98  # pass phrase.  Note that a kill -HUP will prompt again.  A new
+        99  # certificate can be generated using the genkey(1) command.
+       100  SSLCertificateFile /etc/httpd/conf.d/server.crt
+       101
+       102  #   Server Private Key:
+       103  #   If the key is not combined with the certificate, use this
+       104  #   directive to point at the key file.  Keep in mind that if
+       105  #   you've both a RSA and a DSA private key you can configure
+       106  #   both in parallel (to also allow the use of DSA ciphers, etc.)
+       107  SSLCertificateKeyFile /etc/httpd/conf.d/server.key.unsecure    <--说明:   修改此处
+       108
+    [root@client ~]# 
+
+重启httpd服务::
+
+    [root@client ~]# systemctl restart httpd  <--说明:  不再需要输入保护私钥的密码！！！
+    [root@client ~]#  
+
+远程访问https web服务
+------------------------------------------------------------
+
+在Google浏览器中打开 https://192.168.56.15/ 链接，显示如下图:
+
+.. image:: ./_static/images/err_cert_authority_invalid.png
+
+点击"高级" --> "继续前往192.168.56.15（不安全）"，则会正常显示页面:
+
+.. image:: ./_static/images/nginx_https_test.png
+ 
+点击Google地址栏"不安全" --> "证书(无效)"，则会正常显示页面，可以看到证书有效期是2年: 
+
+.. image:: ./_static/images/unsecure.png
+
+点击"证书" --> "详细信息"，可以看到颁发者就是我们的CA中心，则会正常显示页面: 
+
+.. image:: ./_static/images/ca_details.png
+
+在client客户端使用CA中心颁发的证书文件配置https nginx web服务
+---------------------------------------------------------------
+
+为避免nginx测试与httpd冲突，先停止httpd服务::
+
+    [root@client ~]# systemctl stop httpd
+    [root@client ~]# systemctl status httpd
+    ● httpd.service - The Apache HTTP Server
+       Loaded: loaded (/usr/lib/systemd/system/httpd.service; enabled; vendor preset: disabled)
+       Active: inactive (dead) since Wed 2019-06-05 22:52:06 CST; 5s ago
+         Docs: man:httpd(8)
+               man:apachectl(8)
+      Process: 14547 ExecStop=/bin/kill -WINCH ${MAINPID} (code=exited, status=0/SUCCESS)
+      Process: 14506 ExecStart=/usr/sbin/httpd $OPTIONS -DFOREGROUND (code=exited, status=0/SUCCESS)
+     Main PID: 14506 (code=exited, status=0/SUCCESS)
+       Status: "Total requests: 10; Current requests/sec: 0; Current traffic:   0 B/sec"
+
+    Jun 05 22:31:04 client.hopewait systemd[1]: Starting The Apache HTTP Server...
+    Jun 05 22:31:04 client.hopewait systemd[1]: Started The Apache HTTP Server.
+    Jun 05 22:52:05 client.hopewait systemd[1]: Stopping The Apache HTTP Server...
+    Jun 05 22:52:06 client.hopewait systemd[1]: Stopped The Apache HTTP Server.
+    [root@client ~]# 
+
+安装nginx::
+    
+    # 安装YUM源:
+    [root@client ~]# rpm -ivh http://nginx.org/packages/centos/7/noarch/RPMS/nginx-release-centos-7-0.el7.ngx.noarch.rpm
+    Retrieving http://nginx.org/packages/centos/7/noarch/RPMS/nginx-release-centos-7-0.el7.ngx.noarch.rpm
+    warning: /var/tmp/rpm-tmp.XcOG0m: Header V4 RSA/SHA1 Signature, key ID 7bd9bf62: NOKEY
+    Preparing...                          ################################# [100%]
+    Updating / installing...
+       1:nginx-release-centos-7-0.el7.ngx ################################# [100%]
+
+    [root@client ~]#  yum install nginx -y
+    
+查看nginx版本信息::
+
+    [root@client ~]# nginx -v
+    nginx version: nginx/1.16.0
+    [root@client ~]# nginx -V
+    nginx version: nginx/1.16.0
+    built by gcc 4.8.5 20150623 (Red Hat 4.8.5-36) (GCC) 
+    built with OpenSSL 1.0.2k-fips  26 Jan 2017
+    TLS SNI support enabled
+    configure arguments: --prefix=/etc/nginx --sbin-path=/usr/sbin/nginx --modules-path=/usr/lib64/nginx/modules --conf-path=/etc/nginx/nginx.conf --error-log-path=/var/log/nginx/error.log --http-log-path=/var/log/nginx/access.log --pid-path=/var/run/nginx.pid --lock-path=/var/run/nginx.lock --http-client-body-temp-path=/var/cache/nginx/client_temp --http-proxy-temp-path=/var/cache/nginx/proxy_temp --http-fastcgi-temp-path=/var/cache/nginx/fastcgi_temp --http-uwsgi-temp-path=/var/cache/nginx/uwsgi_temp --http-scgi-temp-path=/var/cache/nginx/scgi_temp --user=nginx --group=nginx --with-compat --with-file-aio --with-threads --with-http_addition_module --with-http_auth_request_module --with-http_dav_module --with-http_flv_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_mp4_module --with-http_random_index_module --with-http_realip_module --with-http_secure_link_module --with-http_slice_module --with-http_ssl_module --with-http_stub_status_module --with-http_sub_module --with-http_v2_module --with-mail --with-mail_ssl_module --with-stream --with-stream_realip_module --with-stream_ssl_module --with-stream_ssl_preread_module --with-cc-opt='-O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong --param=ssp-buffer-size=4 -grecord-gcc-switches -m64 -mtune=generic -fPIC' --with-ld-opt='-Wl,-z,relro -Wl,-z,now -pie'
+    [root@client ~]# 
+
+先确认nginx安装时已编译http_ssl模块，也就是执行 nginx -V 命令查看是否存在--with-http_ssl_module。一般都会有的，如果没有，则需要重新编译nginx将该模块加入。
+
+
+
+
+
+
+
+
+
+
+
 
 
 
