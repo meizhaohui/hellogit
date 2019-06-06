@@ -404,7 +404,7 @@ CA认证中心简介
 
 在浏览器中访问链接 http://192.168.56.15/ ，则可以看到Nginx的测试页:
 
-.. image:: ./_static/images/nginx_test.png
+.. image:: ./_static/images/httpd_test.png
 
 现在我们能够正常访问httpd的服务，能正常访问80端口，我们在Client客户端配置CA证书，使httpd提供https加密服务。
 
@@ -812,7 +812,7 @@ Enter PEM pass phrase 处理
 
 点击"高级" --> "继续前往192.168.56.15（不安全）"，则会正常显示页面:
 
-.. image:: ./_static/images/nginx_https_test.png
+.. image:: ./_static/images/httpd_https_test.png
  
 点击Google地址栏"不安全" --> "证书(无效)"，则会正常显示页面，可以看到证书有效期是2年: 
 
@@ -825,7 +825,7 @@ Enter PEM pass phrase 处理
 在client客户端使用CA中心颁发的证书文件配置https nginx web服务
 ---------------------------------------------------------------
 
-为避免nginx测试与httpd冲突，先停止httpd服务::
+为避免nginx测试与httpd冲突，先停止httpd服务，并移除开机自启::
 
     [root@client ~]# systemctl stop httpd
     [root@client ~]# systemctl status httpd
@@ -843,46 +843,614 @@ Enter PEM pass phrase 处理
     Jun 05 22:31:04 client.hopewait systemd[1]: Started The Apache HTTP Server.
     Jun 05 22:52:05 client.hopewait systemd[1]: Stopping The Apache HTTP Server...
     Jun 05 22:52:06 client.hopewait systemd[1]: Stopped The Apache HTTP Server.
+    [root@client ~]# systemctl disable httpd
+    Removed symlink /etc/systemd/system/multi-user.target.wants/httpd.service.
     [root@client ~]# 
 
-安装nginx::
+安装 ``nginx-1.12.2`` 这个版本中 ``nginx.conf`` 文本已经配置好了模板::
     
     # 安装YUM源:
-    [root@client ~]# rpm -ivh http://nginx.org/packages/centos/7/noarch/RPMS/nginx-release-centos-7-0.el7.ngx.noarch.rpm
-    Retrieving http://nginx.org/packages/centos/7/noarch/RPMS/nginx-release-centos-7-0.el7.ngx.noarch.rpm
-    warning: /var/tmp/rpm-tmp.XcOG0m: Header V4 RSA/SHA1 Signature, key ID 7bd9bf62: NOKEY
-    Preparing...                          ################################# [100%]
-    Updating / installing...
-       1:nginx-release-centos-7-0.el7.ngx ################################# [100%]
+   [root@client ~]# yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+   [root@client ~]# rpm -ivh https://centos7.iuscommunity.org/ius-release.rpm
+   
+   # 更新epel为清华大学开源软件镜像站的源
+   参考 https://mirror.tuna.tsinghua.edu.cn/help/epel/
+   可使用以下三个命令进行更新
+   [root@client ~]# sed -i 's@^#baseurl@baseurl@g' /etc/yum.repos.d/epel.repo
+   [root@client ~]# sed -i 's@^metalink@#metalink@g' /etc/yum.repos.d/epel.repo
+   [root@client ~]# sed -i 's@http://download.fedoraproject.org/pub@https://mirrors.tuna.tsinghua.edu.cn@g' /etc/yum.repos.d/epel.repo
+   
+   
+   # 查看nginx info页:
+   [root@client ~]# yum info nginx
+    Loaded plugins: fastestmirror
+    Loading mirror speeds from cached hostfile
+     * base: mirror.jdcloud.com
+     * centos-sclo-rh: mirror.jdcloud.com
+     * epel: mirrors.tuna.tsinghua.edu.cn
+     * extras: mirror.jdcloud.com
+     * updates: mirror.jdcloud.com
+    Available Packages
+    Name        : nginx
+    Arch        : x86_64
+    Epoch       : 1
+    Version     : 1.12.2
+    Release     : 3.el7
+    Size        : 531 k
+    Repo        : epel/x86_64
+    Summary     : A high performance web server and reverse proxy server
+    URL         : http://nginx.org/
+    License     : BSD
+    Description : Nginx is a web server and a reverse proxy server for HTTP, SMTP, POP3 and
+                : IMAP protocols, with a strong focus on high concurrency, performance and low
+                : memory usage.
+    
+    # 安装
+    [root@client ~]# yum install nginx-1.12.2
+    Loaded plugins: fastestmirror
+    Loading mirror speeds from cached hostfile
+     * base: mirror.jdcloud.com
+     * centos-sclo-rh: mirror.jdcloud.com
+     * epel: mirrors.tuna.tsinghua.edu.cn
+     * extras: mirror.jdcloud.com
+     * updates: mirror.jdcloud.com
+    Resolving Dependencies
+    --> Running transaction check
+    ---> Package nginx.x86_64 1:1.12.2-3.el7 will be installed
+    --> Processing Dependency: nginx-all-modules = 1:1.12.2-3.el7 for package: 1:nginx-1.12.2-3.el7.x86_64
+    --> Processing Dependency: nginx-filesystem = 1:1.12.2-3.el7 for package: 1:nginx-1.12.2-3.el7.x86_64
+    --> Processing Dependency: nginx-filesystem for package: 1:nginx-1.12.2-3.el7.x86_64
+    --> Processing Dependency: libprofiler.so.0()(64bit) for package: 1:nginx-1.12.2-3.el7.x86_64
+    --> Running transaction check
+    ---> Package gperftools-libs.x86_64 0:2.6.1-1.el7 will be installed
+    ---> Package nginx-all-modules.noarch 1:1.12.2-3.el7 will be installed
+    --> Processing Dependency: nginx-mod-http-geoip = 1:1.12.2-3.el7 for package: 1:nginx-all-modules-1.12.2-3.el7.noarch
+    --> Processing Dependency: nginx-mod-http-image-filter = 1:1.12.2-3.el7 for package: 1:nginx-all-modules-1.12.2-3.el7.noarch
+    --> Processing Dependency: nginx-mod-http-perl = 1:1.12.2-3.el7 for package: 1:nginx-all-modules-1.12.2-3.el7.noarch
+    --> Processing Dependency: nginx-mod-http-xslt-filter = 1:1.12.2-3.el7 for package: 1:nginx-all-modules-1.12.2-3.el7.noarch
+    --> Processing Dependency: nginx-mod-mail = 1:1.12.2-3.el7 for package: 1:nginx-all-modules-1.12.2-3.el7.noarch
+    --> Processing Dependency: nginx-mod-stream = 1:1.12.2-3.el7 for package: 1:nginx-all-modules-1.12.2-3.el7.noarch
+    ---> Package nginx-filesystem.noarch 1:1.12.2-3.el7 will be installed
+    --> Running transaction check
+    ---> Package nginx-mod-http-geoip.x86_64 1:1.12.2-3.el7 will be installed
+    ---> Package nginx-mod-http-image-filter.x86_64 1:1.12.2-3.el7 will be installed
+    ---> Package nginx-mod-http-perl.x86_64 1:1.12.2-3.el7 will be installed
+    ---> Package nginx-mod-http-xslt-filter.x86_64 1:1.12.2-3.el7 will be installed
+    ---> Package nginx-mod-mail.x86_64 1:1.12.2-3.el7 will be installed
+    ---> Package nginx-mod-stream.x86_64 1:1.12.2-3.el7 will be installed
+    --> Finished Dependency Resolution
 
-    [root@client ~]#  yum install nginx -y
+    Dependencies Resolved
+
+    ====================================================================================================================================
+     Package                                      Arch                    Version                           Repository             Size
+    ====================================================================================================================================
+    Installing:
+     nginx                                        x86_64                  1:1.12.2-3.el7                    epel                  531 k
+    Installing for dependencies:
+     gperftools-libs                              x86_64                  2.6.1-1.el7                       base                  272 k
+     nginx-all-modules                            noarch                  1:1.12.2-3.el7                    epel                   16 k
+     nginx-filesystem                             noarch                  1:1.12.2-3.el7                    epel                   17 k
+     nginx-mod-http-geoip                         x86_64                  1:1.12.2-3.el7                    epel                   23 k
+     nginx-mod-http-image-filter                  x86_64                  1:1.12.2-3.el7                    epel                   27 k
+     nginx-mod-http-perl                          x86_64                  1:1.12.2-3.el7                    epel                   36 k
+     nginx-mod-http-xslt-filter                   x86_64                  1:1.12.2-3.el7                    epel                   26 k
+     nginx-mod-mail                               x86_64                  1:1.12.2-3.el7                    epel                   54 k
+     nginx-mod-stream                             x86_64                  1:1.12.2-3.el7                    epel                   76 k
+
+    Transaction Summary
+    ====================================================================================================================================
+    Install  1 Package (+9 Dependent packages)
+
+    Total download size: 1.1 M
+    Installed size: 3.2 M
+    Is this ok [y/d/N]: y
+    Downloading packages:
+    (1/10): nginx-all-modules-1.12.2-3.el7.noarch.rpm                                                            |  16 kB  00:00:01     
+    (2/10): gperftools-libs-2.6.1-1.el7.x86_64.rpm                                                               | 272 kB  00:00:02     
+    (3/10): nginx-filesystem-1.12.2-3.el7.noarch.rpm                                                             |  17 kB  00:00:03     
+    (4/10): nginx-1.12.2-3.el7.x86_64.rpm                                                                        | 531 kB  00:00:04     
+    (5/10): nginx-mod-http-geoip-1.12.2-3.el7.x86_64.rpm                                                         |  23 kB  00:00:00     
+    (6/10): nginx-mod-http-xslt-filter-1.12.2-3.el7.x86_64.rpm                                                   |  26 kB  00:00:00     
+    (7/10): nginx-mod-mail-1.12.2-3.el7.x86_64.rpm                                                               |  54 kB  00:00:00     
+    (8/10): nginx-mod-http-perl-1.12.2-3.el7.x86_64.rpm                                                          |  36 kB  00:00:00     
+    (9/10): nginx-mod-http-image-filter-1.12.2-3.el7.x86_64.rpm                                                  |  27 kB  00:00:00     
+    (10/10): nginx-mod-stream-1.12.2-3.el7.x86_64.rpm                                                            |  76 kB  00:00:00     
+    ------------------------------------------------------------------------------------------------------------------------------------
+    Total                                                                                               203 kB/s | 1.1 MB  00:00:05     
+    Running transaction check
+    Running transaction test
+    Transaction test succeeded
+    Running transaction
+    Warning: RPMDB altered outside of yum.
+      Installing : 1:nginx-filesystem-1.12.2-3.el7.noarch                                                                          1/10 
+      Installing : gperftools-libs-2.6.1-1.el7.x86_64                                                                              2/10 
+      Installing : 1:nginx-mod-http-xslt-filter-1.12.2-3.el7.x86_64                                                                3/10 
+      Installing : 1:nginx-mod-http-perl-1.12.2-3.el7.x86_64                                                                       4/10 
+      Installing : 1:nginx-mod-http-image-filter-1.12.2-3.el7.x86_64                                                               5/10 
+      Installing : 1:nginx-mod-mail-1.12.2-3.el7.x86_64                                                                            6/10 
+      Installing : 1:nginx-mod-stream-1.12.2-3.el7.x86_64                                                                          7/10 
+      Installing : 1:nginx-mod-http-geoip-1.12.2-3.el7.x86_64                                                                      8/10 
+      Installing : 1:nginx-all-modules-1.12.2-3.el7.noarch                                                                         9/10 
+      Installing : 1:nginx-1.12.2-3.el7.x86_64                                                                                    10/10 
+      Verifying  : 1:nginx-all-modules-1.12.2-3.el7.noarch                                                                         1/10 
+      Verifying  : 1:nginx-mod-http-xslt-filter-1.12.2-3.el7.x86_64                                                                2/10 
+      Verifying  : 1:nginx-mod-http-perl-1.12.2-3.el7.x86_64                                                                       3/10 
+      Verifying  : 1:nginx-mod-http-image-filter-1.12.2-3.el7.x86_64                                                               4/10 
+      Verifying  : gperftools-libs-2.6.1-1.el7.x86_64                                                                              5/10 
+      Verifying  : 1:nginx-1.12.2-3.el7.x86_64                                                                                     6/10 
+      Verifying  : 1:nginx-filesystem-1.12.2-3.el7.noarch                                                                          7/10 
+      Verifying  : 1:nginx-mod-mail-1.12.2-3.el7.x86_64                                                                            8/10 
+      Verifying  : 1:nginx-mod-stream-1.12.2-3.el7.x86_64                                                                          9/10 
+      Verifying  : 1:nginx-mod-http-geoip-1.12.2-3.el7.x86_64                                                                     10/10 
+
+    Installed:
+      nginx.x86_64 1:1.12.2-3.el7                                                                                                       
+
+    Dependency Installed:
+      gperftools-libs.x86_64 0:2.6.1-1.el7                                 nginx-all-modules.noarch 1:1.12.2-3.el7                      
+      nginx-filesystem.noarch 1:1.12.2-3.el7                               nginx-mod-http-geoip.x86_64 1:1.12.2-3.el7                   
+      nginx-mod-http-image-filter.x86_64 1:1.12.2-3.el7                    nginx-mod-http-perl.x86_64 1:1.12.2-3.el7                    
+      nginx-mod-http-xslt-filter.x86_64 1:1.12.2-3.el7                     nginx-mod-mail.x86_64 1:1.12.2-3.el7                         
+      nginx-mod-stream.x86_64 1:1.12.2-3.el7                              
+
+    Complete!
+    
     
 查看nginx版本信息::
 
     [root@client ~]# nginx -v
-    nginx version: nginx/1.16.0
+    nginx version: nginx/1.12.2
     [root@client ~]# nginx -V
-    nginx version: nginx/1.16.0
+    nginx version: nginx/1.12.2
     built by gcc 4.8.5 20150623 (Red Hat 4.8.5-36) (GCC) 
     built with OpenSSL 1.0.2k-fips  26 Jan 2017
     TLS SNI support enabled
-    configure arguments: --prefix=/etc/nginx --sbin-path=/usr/sbin/nginx --modules-path=/usr/lib64/nginx/modules --conf-path=/etc/nginx/nginx.conf --error-log-path=/var/log/nginx/error.log --http-log-path=/var/log/nginx/access.log --pid-path=/var/run/nginx.pid --lock-path=/var/run/nginx.lock --http-client-body-temp-path=/var/cache/nginx/client_temp --http-proxy-temp-path=/var/cache/nginx/proxy_temp --http-fastcgi-temp-path=/var/cache/nginx/fastcgi_temp --http-uwsgi-temp-path=/var/cache/nginx/uwsgi_temp --http-scgi-temp-path=/var/cache/nginx/scgi_temp --user=nginx --group=nginx --with-compat --with-file-aio --with-threads --with-http_addition_module --with-http_auth_request_module --with-http_dav_module --with-http_flv_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_mp4_module --with-http_random_index_module --with-http_realip_module --with-http_secure_link_module --with-http_slice_module --with-http_ssl_module --with-http_stub_status_module --with-http_sub_module --with-http_v2_module --with-mail --with-mail_ssl_module --with-stream --with-stream_realip_module --with-stream_ssl_module --with-stream_ssl_preread_module --with-cc-opt='-O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong --param=ssp-buffer-size=4 -grecord-gcc-switches -m64 -mtune=generic -fPIC' --with-ld-opt='-Wl,-z,relro -Wl,-z,now -pie'
+    configure arguments: --prefix=/usr/share/nginx --sbin-path=/usr/sbin/nginx --modules-path=/usr/lib64/nginx/modules --conf-path=/etc/nginx/nginx.conf --error-log-path=/var/log/nginx/error.log --http-log-path=/var/log/nginx/access.log --http-client-body-temp-path=/var/lib/nginx/tmp/client_body --http-proxy-temp-path=/var/lib/nginx/tmp/proxy --http-fastcgi-temp-path=/var/lib/nginx/tmp/fastcgi --http-uwsgi-temp-path=/var/lib/nginx/tmp/uwsgi --http-scgi-temp-path=/var/lib/nginx/tmp/scgi --pid-path=/run/nginx.pid --lock-path=/run/lock/subsys/nginx --user=nginx --group=nginx --with-file-aio --with-ipv6 --with-http_auth_request_module --with-http_ssl_module --with-http_v2_module --with-http_realip_module --with-http_addition_module --with-http_xslt_module=dynamic --with-http_image_filter_module=dynamic --with-http_geoip_module=dynamic --with-http_sub_module --with-http_dav_module --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_random_index_module --with-http_secure_link_module --with-http_degradation_module --with-http_slice_module --with-http_stub_status_module --with-http_perl_module=dynamic --with-mail=dynamic --with-mail_ssl_module --with-pcre --with-pcre-jit --with-stream=dynamic --with-stream_ssl_module --with-google_perftools_module --with-debug --with-cc-opt='-O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong --param=ssp-buffer-size=4 -grecord-gcc-switches -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -m64 -mtune=generic' --with-ld-opt='-Wl,-z,relro -specs=/usr/lib/rpm/redhat/redhat-hardened-ld -Wl,-E'
     [root@client ~]# 
 
-先确认nginx安装时已编译http_ssl模块，也就是执行 nginx -V 命令查看是否存在--with-http_ssl_module。一般都会有的，如果没有，则需要重新编译nginx将该模块加入。
+- 确认一下 ``nginx`` 安装时已编译 ``http_ssl`` 模块，也就是执行 ``nginx -V`` 命令查看是否存在 ``--with-http_ssl_module`` 。一般都会有的，如果没有，则需要重新编译nginx将该模块加入。
 
 
+查看nginx.conf配置文件的原始内容::
+
+    [root@client ~]# cat -n /etc/nginx/nginx.conf
+         1  # For more information on configuration, see:
+         2  #   * Official English Documentation: http://nginx.org/en/docs/
+         3  #   * Official Russian Documentation: http://nginx.org/ru/docs/
+         4
+         5  user nginx;
+         6  worker_processes auto;
+         7  error_log /var/log/nginx/error.log;
+         8  pid /run/nginx.pid;
+         9
+        10  # Load dynamic modules. See /usr/share/nginx/README.dynamic.
+        11  include /usr/share/nginx/modules/*.conf;
+        12
+        13  events {
+        14      worker_connections 1024;
+        15  }
+        16
+        17  http {
+        18      log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+        19                        '$status $body_bytes_sent "$http_referer" '
+        20                        '"$http_user_agent" "$http_x_forwarded_for"';
+        21
+        22      access_log  /var/log/nginx/access.log  main;
+        23
+        24      sendfile            on;
+        25      tcp_nopush          on;
+        26      tcp_nodelay         on;
+        27      keepalive_timeout   65;
+        28      types_hash_max_size 2048;
+        29
+        30      include             /etc/nginx/mime.types;
+        31      default_type        application/octet-stream;
+        32
+        33      # Load modular configuration files from the /etc/nginx/conf.d directory.
+        34      # See http://nginx.org/en/docs/ngx_core_module.html#include
+        35      # for more information.
+        36      include /etc/nginx/conf.d/*.conf;
+        37
+        38      server {
+        39          listen       80 default_server;
+        40          listen       [::]:80 default_server;
+        41          server_name  _;
+        42          root         /usr/share/nginx/html;
+        43
+        44          # Load configuration files for the default server block.
+        45          include /etc/nginx/default.d/*.conf;
+        46
+        47          location / {
+        48          }
+        49
+        50          error_page 404 /404.html;
+        51              location = /40x.html {
+        52          }
+        53
+        54          error_page 500 502 503 504 /50x.html;
+        55              location = /50x.html {
+        56          }
+        57      }
+        58
+        59  # Settings for a TLS enabled server.
+        60  #
+        61  #    server {
+        62  #        listen       443 ssl http2 default_server;
+        63  #        listen       [::]:443 ssl http2 default_server;
+        64  #        server_name  _;
+        65  #        root         /usr/share/nginx/html;
+        66  #
+        67  #        ssl_certificate "/etc/pki/nginx/server.crt";
+        68  #        ssl_certificate_key "/etc/pki/nginx/private/server.key";
+        69  #        ssl_session_cache shared:SSL:1m;
+        70  #        ssl_session_timeout  10m;
+        71  #        ssl_ciphers HIGH:!aNULL:!MD5;
+        72  #        ssl_prefer_server_ciphers on;
+        73  #
+        74  #        # Load configuration files for the default server block.
+        75  #        include /etc/nginx/default.d/*.conf;
+        76  #
+        77  #        location / {
+        78  #        }
+        79  #
+        80  #        error_page 404 /404.html;
+        81  #            location = /40x.html {
+        82  #        }
+        83  #
+        84  #        error_page 500 502 503 504 /50x.html;
+        85  #            location = /50x.html {
+        86  #        }
+        87  #    }
+        88
+        89  }
+        90
 
 
+可以看到nginx针对普通的80端口以及TLS加密服务的443端口已经给出了配置示例。
+
+将nginx设置为开机启动，并启动nginx::
+
+    [root@client ~]# systemctl enable nginx
+    Created symlink from /etc/systemd/system/multi-user.target.wants/nginx.service to /usr/lib/systemd/system/nginx.service.
+    [root@client ~]# systemctl start nginx
+    [root@client ~]# systemctl status nginx
+    ● nginx.service - The nginx HTTP and reverse proxy server
+       Loaded: loaded (/usr/lib/systemd/system/nginx.service; enabled; vendor preset: disabled)
+       Active: active (running) since Thu 2019-06-06 21:49:30 CST; 7s ago
+      Process: 13765 ExecStart=/usr/sbin/nginx (code=exited, status=0/SUCCESS)
+      Process: 13763 ExecStartPre=/usr/sbin/nginx -t (code=exited, status=0/SUCCESS)
+      Process: 13761 ExecStartPre=/usr/bin/rm -f /run/nginx.pid (code=exited, status=0/SUCCESS)
+     Main PID: 13767 (nginx)
+        Tasks: 2
+       Memory: 6.4M
+       CGroup: /system.slice/nginx.service
+               ├─13767 nginx: master process /usr/sbin/nginx
+               └─13768 nginx: worker process
+
+    Jun 06 21:49:29 client.hopewait systemd[1]: Starting The nginx HTTP and reverse proxy server...
+    Jun 06 21:49:29 client.hopewait nginx[13763]: nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+    Jun 06 21:49:29 client.hopewait nginx[13763]: nginx: configuration file /etc/nginx/nginx.conf test is successful
+    Jun 06 21:49:30 client.hopewait systemd[1]: Failed to read PID from file /run/nginx.pid: Invalid argument
+    Jun 06 21:49:30 client.hopewait systemd[1]: Started The nginx HTTP and reverse proxy server.
+    [root@client ~]# 
+
+查看nginx启动的端口，并检查防火墙是否开放该端口::
+
+    [root@client ~]# netstat -tunlp|grep nginx
+    tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      13767/nginx: master 
+    tcp6       0      0 :::80                   :::*                    LISTEN      13767/nginx: master 
+    [root@client ~]# firewall-cmd --list-all
+    public (active)
+      target: default
+      icmp-block-inversion: no
+      interfaces: enp0s3 enp0s8
+      sources: 
+      services: ssh dhcpv6-client
+      ports: 8140/tcp 53/tcp 11211/tcp 80/tcp 443/tcp
+      protocols: 
+      masquerade: no
+      forward-ports: 
+      source-ports: 
+      icmp-blocks: 
+      rich rules: 
+    [root@client ~]# 
+    
+可以看到nginx当前启动的是80端口，我们使用google浏览器打开 http://192.168.56.15/ 链接:
+
+.. image:: ./_static/images/nginx_test.png
+
+我们将CA证书应用到nginx中，修改nginx的配置文件 ``/etc/nginx/nginx.conf`` ， 将38-57行80端口部分注释掉，61-87行部分取消注释::
+
+    [root@client ~]# cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+    [root@client ~]# sed  -i '38,57s/^/#/g' /etc/nginx/nginx.conf
+    [root@client ~]# sed -i '60,87s/^#//g' /etc/nginx/nginx.conf 
+    # 替换后文件内容如下
+    
+    [root@client ~]# cat -n /etc/nginx/nginx.conf|sed -n '38,90p'
+        38  #    server {
+        39  #        listen       80 default_server;
+        40  #        listen       [::]:80 default_server;
+        41  #        server_name  _;
+        42  #        root         /usr/share/nginx/html;
+        43  #
+        44  #        # Load configuration files for the default server block.
+        45  #        include /etc/nginx/default.d/*.conf;
+        46  #
+        47  #        location / {
+        48  #        }
+        49  #
+        50  #        error_page 404 /404.html;
+        51  #            location = /40x.html {
+        52  #        }
+        53  #
+        54  #        error_page 500 502 503 504 /50x.html;
+        55  #            location = /50x.html {
+        56  #        }
+        57  #    }
+        58
+        59  # Settings for a TLS enabled server.
+        60
+        61      server {
+        62          listen       443 ssl http2 default_server;
+        63          listen       [::]:443 ssl http2 default_server;
+        64          server_name  _;
+        65          root         /usr/share/nginx/html;
+        66
+        67          ssl_certificate "/etc/pki/nginx/server.crt";
+        68          ssl_certificate_key "/etc/pki/nginx/private/server.key";
+        69          ssl_session_cache shared:SSL:1m;
+        70          ssl_session_timeout  10m;
+        71          ssl_ciphers HIGH:!aNULL:!MD5;
+        72          ssl_prefer_server_ciphers on;
+        73
+        74          # Load configuration files for the default server block.
+        75          include /etc/nginx/default.d/*.conf;
+        76
+        77          location / {
+        78          }
+        79
+        80          error_page 404 /404.html;
+        81              location = /40x.html {
+        82          }
+        83
+        84          error_page 500 502 503 504 /50x.html;
+        85              location = /50x.html {
+        86          }
+        87      }
+        88
+        89  }
+        90
+    [root@client ~]# 
+
+替换掉64行的server_name指定具体的IP地址192.168.56.15::
+
+    [root@client ~]# sed -i '64s@server_name  _;@server_name 192.168.56.15;@g' /etc/nginx/nginx.conf
+
+再把67-68两行替换成我们之前配置的CA认证文件以及自己的私钥地址::
+
+    [root@client ~]# sed -i '67s@ssl_certificate "/etc/pki/nginx/server.crt"@ssl_certificate "/root/cafiles/server.crt"@g' /etc/nginx/nginx.conf
+    [root@client ~]# sed -i '68s@ssl_certificate_key "/etc/pki/nginx/private/server.key"@ssl_certificate_key "/root/cafiles/server.key.unsecure"@g' /etc/nginx/nginx.conf
+
+查看文件59-90行::
+
+    [root@client ~]# cat -n /etc/nginx/nginx.conf|sed -n '59,90p'
+        59  # Settings for a TLS enabled server.
+        60
+        61      server {
+        62          listen       443 ssl http2 default_server;
+        63          listen       [::]:443 ssl http2 default_server;
+        64          server_name 192.168.56.15;
+        65          root         /usr/share/nginx/html;
+        66
+        67          ssl_certificate "/root/cafiles/server.crt";
+        68          ssl_certificate_key "/root/cafiles/server.key.unsecure";
+        69          ssl_session_cache shared:SSL:1m;
+        70          ssl_session_timeout  10m;
+        71          ssl_ciphers HIGH:!aNULL:!MD5;
+        72          ssl_prefer_server_ciphers on;
+        73
+        74          # Load configuration files for the default server block.
+        75          include /etc/nginx/default.d/*.conf;
+        76
+        77          location / {
+        78          }
+        79
+        80          error_page 404 /404.html;
+        81              location = /40x.html {
+        82          }
+        83
+        84          error_page 500 502 503 504 /50x.html;
+        85              location = /50x.html {
+        86          }
+        87      }
+        88
+        89  }
+        90
+
+重启nginx服务，发现启动不了::
 
 
+    [root@client ~]# systemctl start nginx
+    Job for nginx.service failed because the control process exited with error code. See "systemctl status nginx.service" and "journalctl -xe" for details.
+    [root@client ~]# systemctl status nginx
+    ● nginx.service - The nginx HTTP and reverse proxy server
+       Loaded: loaded (/usr/lib/systemd/system/nginx.service; enabled; vendor preset: disabled)
+       Active: failed (Result: exit-code) since Thu 2019-06-06 22:23:10 CST; 8s ago
+      Process: 13765 ExecStart=/usr/sbin/nginx (code=exited, status=0/SUCCESS)
+      Process: 13943 ExecStartPre=/usr/sbin/nginx -t (code=exited, status=1/FAILURE)
+      Process: 13942 ExecStartPre=/usr/bin/rm -f /run/nginx.pid (code=exited, status=0/SUCCESS)
+     Main PID: 13767 (code=exited, status=0/SUCCESS)
+    
+    Jun 06 22:23:10 client.hopewait systemd[1]: Starting The nginx HTTP and reverse proxy server...
+    Jun 06 22:23:10 client.hopewait nginx[13943]: nginx: [emerg] BIO_new_file("/root/cafiles/server.crt") failed (SSL: error:02...m lib)
+    Jun 06 22:23:10 client.hopewait nginx[13943]: nginx: configuration file /etc/nginx/nginx.conf test failed
+    Jun 06 22:23:10 client.hopewait systemd[1]: nginx.service: control process exited, code=exited status=1
+    Jun 06 22:23:10 client.hopewait systemd[1]: Failed to start The nginx HTTP and reverse proxy server.
+    Jun 06 22:23:10 client.hopewait systemd[1]: Unit nginx.service entered failed state.
+    Jun 06 22:23:10 client.hopewait systemd[1]: nginx.service failed.
+    Hint: Some lines were ellipsized, use -l to show in full.
+    [root@client ~]# systemctl status nginx -l
+    ● nginx.service - The nginx HTTP and reverse proxy server
+       Loaded: loaded (/usr/lib/systemd/system/nginx.service; enabled; vendor preset: disabled)
+       Active: failed (Result: exit-code) since Thu 2019-06-06 22:23:10 CST; 30s ago
+      Process: 13765 ExecStart=/usr/sbin/nginx (code=exited, status=0/SUCCESS)
+      Process: 13943 ExecStartPre=/usr/sbin/nginx -t (code=exited, status=1/FAILURE)
+      Process: 13942 ExecStartPre=/usr/bin/rm -f /run/nginx.pid (code=exited, status=0/SUCCESS)
+     Main PID: 13767 (code=exited, status=0/SUCCESS)
+    
+    Jun 06 22:23:10 client.hopewait systemd[1]: Starting The nginx HTTP and reverse proxy server...
+    Jun 06 22:23:10 client.hopewait nginx[13943]: nginx: [emerg] BIO_new_file("/root/cafiles/server.crt") failed (SSL: error:0200100D:system library:fopen:Permission denied:fopen('/root/cafiles/server.crt','r') error:2006D002:BIO routines:BIO_new_file:system lib)
+    Jun 06 22:23:10 client.hopewait nginx[13943]: nginx: configuration file /etc/nginx/nginx.conf test failed
+    Jun 06 22:23:10 client.hopewait systemd[1]: nginx.service: control process exited, code=exited status=1
+    Jun 06 22:23:10 client.hopewait systemd[1]: Failed to start The nginx HTTP and reverse proxy server.
+    Jun 06 22:23:10 client.hopewait systemd[1]: Unit nginx.service entered failed state.
+    Jun 06 22:23:10 client.hopewait systemd[1]: nginx.service failed.
 
 
+后又将nginx.conf中证书配置处还原初始状态，并复制证书和私钥到相应的位置::
+
+    [root@client ~]# cat -n /etc/nginx/nginx.conf|sed -n '59,90p'
+        59  # Settings for a TLS enabled server.
+        60
+        61      server {
+        62          listen       443 ssl http2 default_server;
+        63          listen       [::]:443 ssl http2 default_server;
+        64          server_name  192.168.56.15;
+        65          root         /usr/share/nginx/html;
+        66
+        67          ssl_certificate "/etc/pki/nginx/server.crt";
+        68          ssl_certificate_key "/etc/pki/nginx/private/server.key";
+        69          ssl_session_cache shared:SSL:1m;
+        70          ssl_session_timeout  10m;
+        71          ssl_ciphers HIGH:!aNULL:!MD5;
+        72          ssl_prefer_server_ciphers on;
+        73
+        74          # Load configuration files for the default server block.
+        75          include /etc/nginx/default.d/*.conf;
+        76
+        77          location / {
+        78          }
+        79
+        80          error_page 404 /404.html;
+        81              location = /40x.html {
+        82          }
+        83
+        84          error_page 500 502 503 504 /50x.html;
+        85              location = /50x.html {
+        86          }
+        87      }
+        88
+        89  }
+        90
+    [root@client ~]# 
+
+.. Attention:: 如果不进行复制，nginx读取不到/root/cafiles/目录中的文件，则无法启动nginx服务。
 
 
+复制证书文件到/etc/pki/nginx目录下，复制私钥到/etc/pki/nginx/private目录下::
 
+    [root@client ~]# mkdir -p /etc/pki/nginx/private
+    [root@client ~]# cp cafiles/server.crt /etc/pki/nginx/server.crt
+    [root@client ~]# cp cafiles/server.key.unsecure  /etc/pki/nginx/private/server.key
+    [root@client ~]# ls -lah /etc/pki/nginx/
+    total 12K
+    drwxr-xr-x.  3 root root   57 Jun  6 22:30 .
+    drwxr-xr-x. 11 root root  129 Jun  6 22:29 ..
+    drwxr-xr-x.  2 root root   24 Jun  6 22:31 private
+    -rw-r--r--.  1 root root 4.6K Jun  6 22:30 server.crt
+    [root@client ~]# ls -lah /etc/pki/nginx/private/server.key 
+    -rw-r--r--. 1 root root 1.7K Jun  6 22:31 /etc/pki/nginx/private/server.key
 
+使用 ``nginx -t`` 检查一下nginx配置文件是否配置有误::
 
+    [root@client ~]# nginx -t
+    nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+    nginx: configuration file /etc/nginx/nginx.conf test is successful
+    
+语法正确，启动nginx，发现可以正常启动::
+
+    [root@client ~]# systemctl start nginx
+    [root@client ~]# netstat -tunlp|grep nginx
+    tcp        0      0 0.0.0.0:443             0.0.0.0:*               LISTEN      14060/nginx: master 
+    tcp6       0      0 :::443                  :::*                    LISTEN      14060/nginx: master 
+    [root@client ~]# ps -ef|grep nginx
+    root     14060     1  0 22:35 ?        00:00:00 nginx: master process /usr/sbin/nginx
+    nginx    14061 14060  0 22:35 ?        00:00:00 nginx: worker process
+    root     14066 11535  0 22:35 pts/0    00:00:00 grep --color=auto nginx
+
+使用google浏览器打开 https://192.168.56.15/ 链接:
+
+.. image:: ./_static/images/nginx_https_test.png
+
+nginx 80端口转443端口
+------------------------------------
+
+重新修改nginx配置文件80端口部分::
+
+    [root@client ~]# cat -n /etc/nginx/nginx.conf|sed -n '38,90p'
+        38      server {
+        39          listen       80;
+        40  #        listen       [::]:80 default_server;
+        41          server_name  192.168.56.15;
+        42          rewrite ^(.*)$ https://${server_name}$1 permanent;      # <--说明:  此处进行端口转发
+        43  #        root         /usr/share/nginx/html;
+        44  #
+        45  #        # Load configuration files for the default server block.
+        46  #        include /etc/nginx/default.d/*.conf;
+        47  #
+        48  #        location / {
+        49  #        }
+        50  #
+        51  #        error_page 404 /404.html;
+        52  #            location = /40x.html {
+        53  #        }
+        54  #
+        55  #        error_page 500 502 503 504 /50x.html;
+        56  #            location = /50x.html {
+        57  #        }
+        58      }
+        59
+        60  # Settings for a TLS enabled server.
+        61
+        62      server {
+        63          listen       443 ssl http2 default_server;
+        64          listen       [::]:443 ssl http2 default_server;
+        65          server_name 192.168.56.15;
+        66          root         /usr/share/nginx/html;
+        67
+        68          ssl_certificate "/etc/pki/nginx/server.crt";
+        69          ssl_certificate_key "/etc/pki/nginx/private/server.key";
+        70          ssl_session_cache shared:SSL:1m;
+        71          ssl_session_timeout  10m;
+        72          ssl_ciphers HIGH:!aNULL:!MD5;
+        73          ssl_prefer_server_ciphers on;
+        74
+        75          # Load configuration files for the default server block.
+        76          include /etc/nginx/default.d/*.conf;
+        77
+        78          location / {
+        79          }
+        80
+        81          error_page 404 /404.html;
+        82              location = /40x.html {
+        83          }
+        84
+        85          error_page 500 502 503 504 /50x.html;
+        86              location = /50x.html {
+        87          }
+        88      }
+        89
+        90  }
+    [root@client ~]# 
+
+- 使用 ``rewrite ^(.*)$ https://${server_name}$1 permanent;`` 进行端口转发。
+
+使用google浏览器打开 http://192.168.56.15/ 链接时，会自动跳转到  https://192.168.56.15/ 链接:
+
+.. image:: ./_static/images/nginx_80_2_443.png
+
+打开F12调试Network可以看到返回301重定向。
 
 参考文献
 
