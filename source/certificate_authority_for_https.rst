@@ -1452,8 +1452,126 @@ nginx 80端口转443端口
 
 打开F12调试Network可以看到返回301重定向。
 
+httpd 80端口转443端口
+------------------------------------
+
+首先使用 ``systemctl stop nginx`` 停止nginx服务。
+
+在 ``/etc/httpd/conf.d/`` 目录下新增 ``http2https.conf`` 配置文件，配置文件内容如下::
+
+    [root@client ~]# cat -n /etc/httpd/conf.d/http2https.conf 
+         1  <VirtualHost *:80>
+         2      ServerName 192.168.56.15
+         3      RewriteEngine on
+         4      RewriteCond %{SERVER_PORT} !^443$
+         5      RewriteRule ^/?(.*)$ https://%{SERVER_NAME}/$1 [L,R]
+         6  </VirtualHost>                                  
+         7
+    [root@client ~]# 
+
+使用 ``systemctl start httpd`` 启动httpd web服务，则可以看到Apache的测试页。
+
+
+自签名证书
+--------------------------------------
+
+以上证书的使用都是使用CA中心颁发的证书，使用两台服务器进行测试的。
+
+下面我们仅在client服务器上面使用OpenSSL配置自签名证书，不需要CA中心，来达到https加密服务。自签名证书，用于自己测试，不需要CA签发。
+
+先停止httpd服务::
+
+    [root@client ~]# systemctl stop httpd
+    [root@client ~]# ps -ef|grep httpd
+    root     15656 14955  0 20:51 pts/0    00:00:00 grep --color=auto httpd
+
+生成密钥和证书文件::
+
+    [root@client ~]# openssl req -x509 -nodes -days 1095 -newkey rsa:2048 -keyout /etc/httpd/conf.d/self_ca.key -out /etc/httpd/conf.d/self_ca.crt
+    Generating a 2048 bit RSA private key
+    .........+++
+    ..+++
+    writing new private key to '/etc/httpd/conf.d/self_ca.key'
+    -----
+    You are about to be asked to enter information that will be incorporated
+    into your certificate request.
+    What you are about to enter is what is called a Distinguished Name or a DN.
+    There are quite a few fields but you can leave some blank
+    For some fields there will be a default value,
+    If you enter '.', the field will be left blank.
+    -----
+    Country Name (2 letter code) [XX]:CN
+    State or Province Name (full name) []:hubei
+    Locality Name (eg, city) [Default City]:wuhan
+    Organization Name (eg, company) [Default Company Ltd]:IT
+    Organizational Unit Name (eg, section) []:hopewait
+    Common Name (eg, your name or your server's hostname) []:192.168.56.15
+    Email Address []:mzh.whut@gmail.com
+    [root@client ~]# ls -lah /etc/httpd/conf.d/self_ca*
+    -rw-r--r-- 1 root root 1.4K Jun 13 20:59 /etc/httpd/conf.d/self_ca.crt
+    -rw-r--r-- 1 root root 1.7K Jun 13 20:59 /etc/httpd/conf.d/self_ca.key
+    [root@client ~]# 
+
+
+.. Attention::
+    参数说明：
+    
+    
+    
+    -key    指定已有的秘钥文件生成秘钥请求，只与生成证书请求选项-new配合
+    
+    -xfivezeronine   -x509 说明生成自签名证
+    
+    -newkey  -newkey是与-key互斥的，-newkey是指在生成证书请求或者自签名证书的时候自动生成密钥，生成的密钥名称由-keyout参数指定。当指定newkey选项时，后面指定rsa:bits说明产生rsa密钥，位数由bits指定。如果没有指定选项-key和-newkey，默认自动生成秘钥
+    
+    -out    指定生成的证书请求或者自签名证书名称
+    
+    -nodes  如果指定-newkey自动生成秘钥，那么-nodes选项说明生成的秘钥不需要加密，即不需要输入passphase 
+    
+    -days  -days n 指定自签名证书的有效期限。默认为30天
+          
+修改Apache的配置文件 ``/etc/httpd/conf.d/ssl.conf`` 的证书文件和密钥文件路径::
+
+    [root@client ~]# cat -n /etc/httpd/conf.d/ssl.conf|sed -n '95,108p'
+        95  #   Server Certificate:
+        96  # Point SSLCertificateFile at a PEM encoded certificate.  If
+        97  # the certificate is encrypted, then you will be prompted for a
+        98  # pass phrase.  Note that a kill -HUP will prompt again.  A new
+        99  # certificate can be generated using the genkey(1) command.
+       100  SSLCertificateFile /etc/httpd/conf.d/self_ca.crt        <-- 说明：证书文件路径
+       101
+       102  #   Server Private Key:
+       103  #   If the key is not combined with the certificate, use this
+       104  #   directive to point at the key file.  Keep in mind that if
+       105  #   you've both a RSA and a DSA private key you can configure
+       106  #   both in parallel (to also allow the use of DSA ciphers, etc.)
+       107  SSLCertificateKeyFile /etc/httpd/conf.d/self_ca.key       <-- 说明：密钥文件路径
+       108
+    [root@client ~]# 
+
+重启httpd服务::
+
+    [root@client ~]# httpd -t
+    Syntax OK
+    [root@client ~]# systemctl start httpd
+    [root@client ~]# 
+
+使用google浏览器打开 http://192.168.56.15/ 链接时，会自动跳转到  https://192.168.56.15/ 链接，此时查看证书的详情:
+
+.. image:: ./_static/images/self_ca.png
+
+可以看到证书的颁发者和使用者都是192.168.56.15，有效期三年，也就是我们刚才的配置的自签名证书呢。
+
+无论是通过配置OpenSSL配置CA中心颁发签名证书还是自签名证书，浏览器都认为证书是 **不安全** 的，推荐使用权威CA中心签发的证书。
+
+
+如果自己有域名并解析到云服务器上，可以使用 ``Let’s Encrypt`` CA中心颁发的证书来构建https服务。可参考 https://letsencrypt.org/zh-cn/getting-started/ 和 https://certbot.eff.org/docs/using.html#where-are-my-certificates 。
+
+
+
 参考文献
 
 
 CentOS 7搭建CA认证中心实现https取证  https://www.cnblogs.com/bigdevilking/p/9434444.html
 
+openssl 命令(1): openssl req命令详解 https://blog.csdn.net/abccheng/article/details/82622899
