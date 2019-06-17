@@ -1567,11 +1567,1300 @@ httpd 80端口转443端口
 
 如果自己有域名并解析到云服务器上，可以使用 ``Let’s Encrypt`` CA中心颁发的证书来构建https服务。可参考 https://letsencrypt.org/zh-cn/getting-started/ 和 https://certbot.eff.org/docs/using.html#where-are-my-certificates 。
 
+使用Let’s Encrypt颁发证书
+--------------------------------------
 
 
-参考文献
+什么是Let’s Encrypt
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+.. image:: ./_static/images/LetsEncrypt.jpg
+
+`Let's Encrypt <https://letsencrypt.org/>`_ 是一个由非营利性组织 互联网安全研究小组（ISRG）提供的免费、自动化和开放的证书颁发机构（CA）。
+
+简单的说，借助 Let's Encrypt 颁发的证书可以为我们的网站免费启用 ``HTTPS(SSL/TLS)`` 。
+
+Let's Encrypt免费证书的签发/续签都是脚本自动化的，官方提供了几种证书的申请方式方法， `点击此处 <https://letsencrypt.org/docs/client-options/>`_ 快速浏览。官方推荐使用 `Certbot <https://certbot.eff.org/lets-encrypt/centosrhel7-apache>`_ 客户端来签发证书。
+
+Let's Encrypt免费证书默认是90天有效期，后面我们需要设置自动续签证书。
+
+下载Let's Encrypt脚本文件::
+
+    [root@hopewait ~]# git clone https://github.com/letsencrypt/letsencrypt
+    Cloning into 'letsencrypt'...
+    remote: Enumerating objects: 98, done.
+    remote: Counting objects: 100% (98/98), done.
+    remote: Compressing objects: 100% (72/72), done.
+    remote: Total 66231 (delta 52), reused 63 (delta 26), pack-reused 66133
+    Receiving objects: 100% (66231/66231), 21.66 MiB | 21.38 MiB/s, done.
+    Resolving deltas: 100% (48443/48443), done.
+    
+    或者：git clone https://github.com/certbot/certbot.git 
+    
+查看letsencrypt的版本::
+
+    [root@hopewait ~]# /root/letsencrypt/certbot-auto --version
+    certbot 0.35.1
+
+获取帮助信息(帮助信息很长，可以将其重写向到文件中)::
+
+
+    [root@hopewait ~]# /root/letsencrypt/certbot-auto --help all
+        usage: 
+          certbot-auto [SUBCOMMAND] [options] [-d DOMAIN] [-d DOMAIN] ...
+
+        Certbot can obtain and install HTTPS/TLS/SSL certificates.  By default,
+        it will attempt to use a webserver both for obtaining and installing the
+        certificate. The most common SUBCOMMANDS and flags are:
+
+        obtain, install, and renew certificates:
+            (default) run   Obtain & install a certificate in your current webserver
+            certonly        Obtain or renew a certificate, but do not install it
+            renew           Renew all previously obtained certificates that are near expiry
+            enhance         Add security enhancements to your existing configuration
+           -d DOMAINS       Comma-separated list of domains to obtain a certificate for
+
+          --apache          Use the Apache plugin for authentication & installation
+          --standalone      Run a standalone webserver for authentication
+          --nginx           Use the Nginx plugin for authentication & installation
+          --webroot         Place files in a server's webroot folder for authentication
+          --manual          Obtain certificates interactively, or using shell script hooks
+
+           -n               Run non-interactively
+          --test-cert       Obtain a test certificate from a staging server
+          --dry-run         Test "renew" or "certonly" without saving any certificates to disk
+
+        manage certificates:
+            certificates    Display information about certificates you have from Certbot
+            revoke          Revoke a certificate (supply --cert-path or --cert-name)
+            delete          Delete a certificate
+
+        manage your account with Let's Encrypt:
+            register        Create a Let's Encrypt ACME account
+            unregister      Deactivate a Let's Encrypt ACME account
+            update_account  Update a Let's Encrypt ACME account
+          --agree-tos       Agree to the ACME server's Subscriber Agreement
+           -m EMAIL         Email address for important account notifications
+
+        optional arguments:
+          -h, --help            show this help message and exit
+          -c CONFIG_FILE, --config CONFIG_FILE
+                                path to config file (default: /etc/letsencrypt/cli.ini
+                                and ~/.config/letsencrypt/cli.ini)
+          -v, --verbose         This flag can be used multiple times to incrementally
+                                increase the verbosity of output, e.g. -vvv. (default:
+                                -2)
+          --max-log-backups MAX_LOG_BACKUPS
+                                Specifies the maximum number of backup logs that
+                                should be kept by Certbot's built in log rotation.
+                                Setting this flag to 0 disables log rotation entirely,
+                                causing Certbot to always append to the same log file.
+                                (default: 1000)
+          -n, --non-interactive, --noninteractive
+                                Run without ever asking for user input. This may
+                                require additional command line flags; the client will
+                                try to explain which ones are required if it finds one
+                                missing (default: False)
+          --force-interactive   Force Certbot to be interactive even if it detects
+                                it's not being run in a terminal. This flag cannot be
+                                used with the renew subcommand. (default: False)
+          -d DOMAIN, --domains DOMAIN, --domain DOMAIN
+                                Domain names to apply. For multiple domains you can
+                                use multiple -d flags or enter a comma separated list
+                                of domains as a parameter. The first domain provided
+                                will be the subject CN of the certificate, and all
+                                domains will be Subject Alternative Names on the
+                                certificate. The first domain will also be used in
+                                some software user interfaces and as the file paths
+                                for the certificate and related material unless
+                                otherwise specified or you already have a certificate
+                                with the same name. In the case of a name collision it
+                                will append a number like 0001 to the file path name.
+                                (default: Ask)
+          --eab-kid EAB_KID     Key Identifier for External Account Binding (default:
+                                None)
+          --eab-hmac-key EAB_HMAC_KEY
+                                HMAC key for External Account Binding (default: None)
+          --cert-name CERTNAME  Certificate name to apply. This name is used by
+                                Certbot for housekeeping and in file paths; it doesn't
+                                affect the content of the certificate itself. To see
+                                certificate names, run 'certbot certificates'. When
+                                creating a new certificate, specifies the new
+                                certificate's name. (default: the first provided
+                                domain or the name of an existing certificate on your
+                                system for the same domains)
+          --dry-run             Perform a test run of the client, obtaining test
+                                (invalid) certificates but not saving them to disk.
+                                This can currently only be used with the 'certonly'
+                                and 'renew' subcommands. Note: Although --dry-run
+                                tries to avoid making any persistent changes on a
+                                system, it is not completely side-effect free: if used
+                                with webserver authenticator plugins like apache and
+                                nginx, it makes and then reverts temporary config
+                                changes in order to obtain test certificates, and
+                                reloads webservers to deploy and then roll back those
+                                changes. It also calls --pre-hook and --post-hook
+                                commands if they are defined because they may be
+                                necessary to accurately simulate renewal. --deploy-
+                                hook commands are not called. (default: False)
+          --debug-challenges    After setting up challenges, wait for user input
+                                before submitting to CA (default: False)
+          --preferred-challenges PREF_CHALLS
+                                A sorted, comma delimited list of the preferred
+                                challenge to use during authorization with the most
+                                preferred challenge listed first (Eg, "dns" or
+                                "http,dns"). Not all plugins support all challenges.
+                                See https://certbot.eff.org/docs/using.html#plugins
+                                for details. ACME Challenges are versioned, but if you
+                                pick "http" rather than "http-01", Certbot will select
+                                the latest version automatically. (default: [])
+          --user-agent USER_AGENT
+                                Set a custom user agent string for the client. User
+                                agent strings allow the CA to collect high level
+                                statistics about success rates by OS, plugin and use
+                                case, and to know when to deprecate support for past
+                                Python versions and flags. If you wish to hide this
+                                information from the Let's Encrypt server, set this to
+                                "". (default: CertbotACMEClient/0.35.1 (certbot-auto;
+                                CentOS Linux 7 (Core)) Authenticator/XXX Installer/YYY
+                                (SUBCOMMAND; flags: FLAGS) Py/2.7.5). The flags
+                                encoded in the user agent are: --duplicate, --force-
+                                renew, --allow-subset-of-names, -n, and whether any
+                                hooks are set.
+          --user-agent-comment USER_AGENT_COMMENT
+                                Add a comment to the default user agent string. May be
+                                used when repackaging Certbot or calling it from
+                                another tool to allow additional statistical data to
+                                be collected. Ignored if --user-agent is set.
+                                (Example: Foo-Wrapper/1.0) (default: None)
+
+        automation:
+          Flags for automating execution & other tweaks
+
+          --keep-until-expiring, --keep, --reinstall
+                                If the requested certificate matches an existing
+                                certificate, always keep the existing one until it is
+                                due for renewal (for the 'run' subcommand this means
+                                reinstall the existing certificate). (default: Ask)
+          --expand              If an existing certificate is a strict subset of the
+                                requested names, always expand and replace it with the
+                                additional names. (default: Ask)
+          --version             show program's version number and exit
+          --force-renewal, --renew-by-default
+                                If a certificate already exists for the requested
+                                domains, renew it now, regardless of whether it is
+                                near expiry. (Often --keep-until-expiring is more
+                                appropriate). Also implies --expand. (default: False)
+          --renew-with-new-domains
+                                If a certificate already exists for the requested
+                                certificate name but does not match the requested
+                                domains, renew it now, regardless of whether it is
+                                near expiry. (default: False)
+          --reuse-key           When renewing, use the same private key as the
+                                existing certificate. (default: False)
+          --allow-subset-of-names
+                                When performing domain validation, do not consider it
+                                a failure if authorizations can not be obtained for a
+                                strict subset of the requested domains. This may be
+                                useful for allowing renewals for multiple domains to
+                                succeed even if some domains no longer point at this
+                                system. This option cannot be used with --csr.
+                                (default: False)
+          --agree-tos           Agree to the ACME Subscriber Agreement (default: Ask)
+          --duplicate           Allow making a certificate lineage that duplicates an
+                                existing one (both can be renewed in parallel)
+                                (default: False)
+          --os-packages-only    (certbot-auto only) install OS package dependencies
+                                and then stop (default: False)
+          --no-self-upgrade     (certbot-auto only) prevent the certbot-auto script
+                                from upgrading itself to newer released versions
+                                (default: Upgrade automatically)
+          --no-bootstrap        (certbot-auto only) prevent the certbot-auto script
+                                from installing OS-level dependencies (default: Prompt
+                                to install OS-wide dependencies, but exit if the user
+                                says 'No')
+          --no-permissions-check
+                                (certbot-auto only) skip the check on the file system
+                                permissions of the certbot-auto script (default:
+                                False)
+          -q, --quiet           Silence all output except errors. Useful for
+                                automation via cron. Implies --non-interactive.
+                                (default: False)
+
+        security:
+          Security parameters & server settings
+
+          --rsa-key-size N      Size of the RSA key. (default: 2048)
+          --must-staple         Adds the OCSP Must Staple extension to the
+                                certificate. Autoconfigures OCSP Stapling for
+                                supported setups (Apache version >= 2.3.3 ). (default:
+                                False)
+          --redirect            Automatically redirect all HTTP traffic to HTTPS for
+                                the newly authenticated vhost. (default: Ask)
+          --no-redirect         Do not automatically redirect all HTTP traffic to
+                                HTTPS for the newly authenticated vhost. (default:
+                                Ask)
+          --hsts                Add the Strict-Transport-Security header to every HTTP
+                                response. Forcing browser to always use SSL for the
+                                domain. Defends against SSL Stripping. (default: None)
+          --uir                 Add the "Content-Security-Policy: upgrade-insecure-
+                                requests" header to every HTTP response. Forcing the
+                                browser to use https:// for every http:// resource.
+                                (default: None)
+          --staple-ocsp         Enables OCSP Stapling. A valid OCSP response is
+                                stapled to the certificate that the server offers
+                                during TLS. (default: None)
+          --strict-permissions  Require that all configuration files are owned by the
+                                current user; only needed if your config is somewhere
+                                unsafe like /tmp/ (default: False)
+          --auto-hsts           Gradually increasing max-age value for HTTP Strict
+                                Transport Security security header (default: False)
+
+        testing:
+          The following flags are meant for testing and integration purposes only.
+
+          --test-cert, --staging
+                                Use the staging server to obtain or revoke test
+                                (invalid) certificates; equivalent to --server https
+                                ://acme-staging-v02.api.letsencrypt.org/directory
+                                (default: False)
+          --debug               Show tracebacks in case of errors, and allow certbot-
+                                auto execution on experimental platforms (default:
+                                False)
+          --no-verify-ssl       Disable verification of the ACME server's certificate.
+                                (default: False)
+          --http-01-port HTTP01_PORT
+                                Port used in the http-01 challenge. This only affects
+                                the port Certbot listens on. A conforming ACME server
+                                will still attempt to connect on port 80. (default:
+                                80)
+          --http-01-address HTTP01_ADDRESS
+                                The address the server listens to during http-01
+                                challenge. (default: )
+          --https-port HTTPS_PORT
+                                Port used to serve HTTPS. This affects which port
+                                Nginx will listen on after a LE certificate is
+                                installed. (default: 443)
+          --break-my-certs      Be willing to replace or renew valid certificates with
+                                invalid (testing/staging) certificates (default:
+                                False)
+
+        paths:
+          Flags for changing execution paths & servers
+
+          --cert-path CERT_PATH
+                                Path to where certificate is saved (with auth --csr),
+                                installed from, or revoked. (default: None)
+          --key-path KEY_PATH   Path to private key for certificate installation or
+                                revocation (if account key is missing) (default: None)
+          --fullchain-path FULLCHAIN_PATH
+                                Accompanying path to a full certificate chain
+                                (certificate plus chain). (default: None)
+          --chain-path CHAIN_PATH
+                                Accompanying path to a certificate chain. (default:
+                                None)
+          --config-dir CONFIG_DIR
+                                Configuration directory. (default: /etc/letsencrypt)
+          --work-dir WORK_DIR   Working directory. (default: /var/lib/letsencrypt)
+          --logs-dir LOGS_DIR   Logs directory. (default: /var/log/letsencrypt)
+          --server SERVER       ACME Directory Resource URI. (default:
+                                https://acme-v02.api.letsencrypt.org/directory)
+
+        manage:
+          Various subcommands and flags are available for managing your
+          certificates:
+
+          certificates          List certificates managed by Certbot
+          delete                Clean up all files related to a certificate
+          renew                 Renew all certificates (or one specified with --cert-
+                                name)
+          revoke                Revoke a certificate specified with --cert-path or
+                                --cert-name
+          update_symlinks       Recreate symlinks in your /etc/letsencrypt/live/
+                                directory
+
+        run:
+          Options for obtaining & installing certificates
+
+        certonly:
+          Options for modifying how a certificate is obtained
+
+          --csr CSR             Path to a Certificate Signing Request (CSR) in DER or
+                                PEM format. Currently --csr only works with the
+                                'certonly' subcommand. (default: None)
+
+        renew:
+          The 'renew' subcommand will attempt to renew all certificates (or more
+          precisely, certificate lineages) you have previously obtained if they are
+          close to expiry, and print a summary of the results. By default, 'renew'
+          will reuse the options used to create obtain or most recently successfully
+          renew each certificate lineage. You can try it with `--dry-run` first. For
+          more fine-grained control, you can renew individual lineages with the
+          `certonly` subcommand. Hooks are available to run commands before and
+          after renewal; see https://certbot.eff.org/docs/using.html#renewal for
+          more information on these.
+
+          --pre-hook PRE_HOOK   Command to be run in a shell before obtaining any
+                                certificates. Intended primarily for renewal, where it
+                                can be used to temporarily shut down a webserver that
+                                might conflict with the standalone plugin. This will
+                                only be called if a certificate is actually to be
+                                obtained/renewed. When renewing several certificates
+                                that have identical pre-hooks, only the first will be
+                                executed. (default: None)
+          --post-hook POST_HOOK
+                                Command to be run in a shell after attempting to
+                                obtain/renew certificates. Can be used to deploy
+                                renewed certificates, or to restart any servers that
+                                were stopped by --pre-hook. This is only run if an
+                                attempt was made to obtain/renew a certificate. If
+                                multiple renewed certificates have identical post-
+                                hooks, only one will be run. (default: None)
+          --deploy-hook DEPLOY_HOOK
+                                Command to be run in a shell once for each
+                                successfully issued certificate. For this command, the
+                                shell variable $RENEWED_LINEAGE will point to the
+                                config live subdirectory (for example,
+                                "/etc/letsencrypt/live/example.com") containing the
+                                new certificates and keys; the shell variable
+                                $RENEWED_DOMAINS will contain a space-delimited list
+                                of renewed certificate domains (for example,
+                                "example.com www.example.com" (default: None)
+          --disable-hook-validation
+                                Ordinarily the commands specified for --pre-hook
+                                /--post-hook/--deploy-hook will be checked for
+                                validity, to see if the programs being run are in the
+                                $PATH, so that mistakes can be caught early, even when
+                                the hooks aren't being run just yet. The validation is
+                                rather simplistic and fails if you use more advanced
+                                shell constructs, so you can use this switch to
+                                disable it. (default: False)
+          --no-directory-hooks  Disable running executables found in Certbot's hook
+                                directories during renewal. (default: False)
+          --disable-renew-updates
+                                Disable automatic updates to your server configuration
+                                that would otherwise be done by the selected installer
+                                plugin, and triggered when the user executes "certbot
+                                renew", regardless of if the certificate is renewed.
+                                This setting does not apply to important TLS
+                                configuration updates. (default: False)
+          --no-autorenew        Disable auto renewal of certificates. (default: True)
+
+        certificates:
+          List certificates managed by Certbot
+
+        delete:
+          Options for deleting a certificate
+
+        revoke:
+          Options for revocation of certificates
+
+          --reason {unspecified,keycompromise,affiliationchanged,superseded,cessationofoperation}
+                                Specify reason for revoking certificate. (default:
+                                unspecified)
+          --delete-after-revoke
+                                Delete certificates after revoking them, along with
+                                all previous and later versions of those certificates.
+                                (default: None)
+          --no-delete-after-revoke
+                                Do not delete certificates after revoking them. This
+                                option should be used with caution because the 'renew'
+                                subcommand will attempt to renew undeleted revoked
+                                certificates. (default: None)
+
+        register:
+          Options for account registration
+
+          --register-unsafely-without-email
+                                Specifying this flag enables registering an account
+                                with no email address. This is strongly discouraged,
+                                because in the event of key loss or account compromise
+                                you will irrevocably lose access to your account. You
+                                will also be unable to receive notice about impending
+                                expiration or revocation of your certificates. Updates
+                                to the Subscriber Agreement will still affect you, and
+                                will be effective 14 days after posting an update to
+                                the web site. (default: False)
+          -m EMAIL, --email EMAIL
+                                Email used for registration and recovery contact. Use
+                                comma to register multiple emails, ex:
+                                u1@example.com,u2@example.com. (default: Ask).
+          --eff-email           Share your e-mail address with EFF (default: None)
+          --no-eff-email        Don't share your e-mail address with EFF (default:
+                                None)
+
+        update_account:
+          Options for account modification
+
+        unregister:
+          Options for account deactivation.
+
+          --account ACCOUNT_ID  Account ID to use (default: None)
+
+        install:
+          Options for modifying how a certificate is deployed
+
+        config_changes:
+          Options for controlling which changes are displayed
+
+          --num NUM             How many past revisions you want to be displayed
+                                (default: None)
+
+        rollback:
+          Options for rolling back server configuration changes
+
+          --checkpoints N       Revert configuration N number of checkpoints.
+                                (default: 1)
+
+        plugins:
+          Options for for the "plugins" subcommand
+
+          --init                Initialize plugins. (default: False)
+          --prepare             Initialize and prepare plugins. (default: False)
+          --authenticators      Limit to authenticator plugins only. (default: None)
+          --installers          Limit to installer plugins only. (default: None)
+
+        update_symlinks:
+          Recreates certificate and key symlinks in /etc/letsencrypt/live, if you
+          changed them by hand or edited a renewal configuration file
+
+        enhance:
+          Helps to harden the TLS configuration by adding security enhancements to
+          already existing configuration.
+
+        plugins:
+          Plugin Selection: Certbot client supports an extensible plugins
+          architecture. See 'certbot plugins' for a list of all installed plugins
+          and their names. You can force a particular plugin by setting options
+          provided below. Running --help <plugin_name> will list flags specific to
+          that plugin.
+
+          --configurator CONFIGURATOR
+                                Name of the plugin that is both an authenticator and
+                                an installer. Should not be used together with
+                                --authenticator or --installer. (default: Ask)
+          -a AUTHENTICATOR, --authenticator AUTHENTICATOR
+                                Authenticator plugin name. (default: None)
+          -i INSTALLER, --installer INSTALLER
+                                Installer plugin name (also used to find domains).
+                                (default: None)
+          --apache              Obtain and install certificates using Apache (default:
+                                False)
+          --nginx               Obtain and install certificates using Nginx (default:
+                                False)
+          --standalone          Obtain certificates using a "standalone" webserver.
+                                (default: False)
+          --manual              Provide laborious manual instructions for obtaining a
+                                certificate (default: False)
+          --webroot             Obtain certificates by placing files in a webroot
+                                directory. (default: False)
+          --dns-cloudflare      Obtain certificates using a DNS TXT record (if you are
+                                using Cloudflare for DNS). (default: False)
+          --dns-cloudxns        Obtain certificates using a DNS TXT record (if you are
+                                using CloudXNS for DNS). (default: False)
+          --dns-digitalocean    Obtain certificates using a DNS TXT record (if you are
+                                using DigitalOcean for DNS). (default: False)
+          --dns-dnsimple        Obtain certificates using a DNS TXT record (if you are
+                                using DNSimple for DNS). (default: False)
+          --dns-dnsmadeeasy     Obtain certificates using a DNS TXT record (if you are
+                                using DNS Made Easy for DNS). (default: False)
+          --dns-gehirn          Obtain certificates using a DNS TXT record (if you are
+                                using Gehirn Infrastracture Service for DNS).
+                                (default: False)
+          --dns-google          Obtain certificates using a DNS TXT record (if you are
+                                using Google Cloud DNS). (default: False)
+          --dns-linode          Obtain certificates using a DNS TXT record (if you are
+                                using Linode for DNS). (default: False)
+          --dns-luadns          Obtain certificates using a DNS TXT record (if you are
+                                using LuaDNS for DNS). (default: False)
+          --dns-nsone           Obtain certificates using a DNS TXT record (if you are
+                                using NS1 for DNS). (default: False)
+          --dns-ovh             Obtain certificates using a DNS TXT record (if you are
+                                using OVH for DNS). (default: False)
+          --dns-rfc2136         Obtain certificates using a DNS TXT record (if you are
+                                using BIND for DNS). (default: False)
+          --dns-route53         Obtain certificates using a DNS TXT record (if you are
+                                using Route53 for DNS). (default: False)
+          --dns-sakuracloud     Obtain certificates using a DNS TXT record (if you are
+                                using Sakura Cloud for DNS). (default: False)
+
+        apache:
+          Apache Web Server plugin
+
+          --apache-enmod APACHE_ENMOD
+                                Path to the Apache 'a2enmod' binary (default: None)
+          --apache-dismod APACHE_DISMOD
+                                Path to the Apache 'a2dismod' binary (default: None)
+          --apache-le-vhost-ext APACHE_LE_VHOST_EXT
+                                SSL vhost configuration extension (default: -le-
+                                ssl.conf)
+          --apache-server-root APACHE_SERVER_ROOT
+                                Apache server root directory (default: /etc/httpd)
+          --apache-vhost-root APACHE_VHOST_ROOT
+                                Apache server VirtualHost configuration root (default:
+                                None)
+          --apache-logs-root APACHE_LOGS_ROOT
+                                Apache server logs directory (default: /var/log/httpd)
+          --apache-challenge-location APACHE_CHALLENGE_LOCATION
+                                Directory path for challenge configuration (default:
+                                /etc/httpd/conf.d)
+          --apache-handle-modules APACHE_HANDLE_MODULES
+                                Let installer handle enabling required modules for you
+                                (Only Ubuntu/Debian currently) (default: False)
+          --apache-handle-sites APACHE_HANDLE_SITES
+                                Let installer handle enabling sites for you (Only
+                                Ubuntu/Debian currently) (default: False)
+          --apache-ctl APACHE_CTL
+                                Full path to Apache control script (default:
+                                apachectl)
+
+        manual:
+          Authenticate through manual configuration or custom shell scripts. When
+          using shell scripts, an authenticator script must be provided. The
+          environment variables available to this script depend on the type of
+          challenge. $CERTBOT_DOMAIN will always contain the domain being
+          authenticated. For HTTP-01 and DNS-01, $CERTBOT_VALIDATION is the
+          validation string, and $CERTBOT_TOKEN is the filename of the resource
+          requested when performing an HTTP-01 challenge. An additional cleanup
+          script can also be provided and can use the additional variable
+          $CERTBOT_AUTH_OUTPUT which contains the stdout output from the auth
+          script.
+
+          --manual-auth-hook MANUAL_AUTH_HOOK
+                                Path or command to execute for the authentication
+                                script (default: None)
+          --manual-cleanup-hook MANUAL_CLEANUP_HOOK
+                                Path or command to execute for the cleanup script
+                                (default: None)
+          --manual-public-ip-logging-ok
+                                Automatically allows public IP logging (default: Ask)
+
+        nginx:
+          Nginx Web Server plugin
+
+          --nginx-server-root NGINX_SERVER_ROOT
+                                Nginx server root directory. (default: /etc/nginx)
+          --nginx-ctl NGINX_CTL
+                                Path to the 'nginx' binary, used for 'configtest' and
+                                retrieving nginx version number. (default: nginx)
+
+        null:
+          Null Installer
+
+        standalone:
+          Spin up a temporary webserver
+
+        webroot:
+          Place files in webroot directory
+
+          --webroot-path WEBROOT_PATH, -w WEBROOT_PATH
+                                public_html / webroot path. This can be specified
+                                multiple times to handle different domains; each
+                                domain will have the webroot path that preceded it.
+                                For instance: `-w /var/www/example -d example.com -d
+                                www.example.com -w /var/www/thing -d thing.net -d
+                                m.thing.net` (default: Ask)
+          --webroot-map WEBROOT_MAP
+                                JSON dictionary mapping domains to webroot paths; this
+                                implies -d for each entry. You may need to escape this
+                                from your shell. E.g.: --webroot-map
+                                '{"eg1.is,m.eg1.is":"/www/eg1/", "eg2.is":"/www/eg2"}'
+                                This option is merged with, but takes precedence over,
+                                -w / -d entries. At present, if you put webroot-map in
+                                a config file, it needs to be on a single line, like:
+                                webroot-map = {"example.com":"/var/www"}. (default:
+                                {})
+
+生成证书
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+创建证书文件，创建证书过程中会自动安装依赖包::
+
+    [root@hopewait ~]# /root/letsencrypt/certbot-auto certonly --standalone --email mzh@hopewait.com -d hopewait.com -d www.hopewait.com
+    Bootstrapping dependencies for RedHat-based OSes... (you can skip this with --no-bootstrap)
+    yum is /usr/bin/yum
+    yum is hashed (/usr/bin/yum)
+    Loaded plugins: fastestmirror
+    Loading mirror speeds from cached hostfile
+    epel/x86_64/metalink                                                                                            |  18 kB  00:00:00     
+     * base: centos.sonn.com
+     * epel: mirror.layeronline.com
+     * extras: mirror.fileplanet.com
+     * updates: mirror.fileplanet.com
+    base                                                                                                            | 3.6 kB  00:00:00     
+    epel                                                                                                            | 5.3 kB  00:00:00     
+    extras                                                                                                          | 3.4 kB  00:00:00     
+    ius                                                                                                             | 1.3 kB  00:00:00     
+    updates                                                                                                         | 3.4 kB  00:00:00     
+    (1/2): epel/x86_64/updateinfo                                                                                   | 976 kB  00:00:00     
+    (2/2): epel/x86_64/primary_db                                                                                   | 6.7 MB  00:00:00     
+    Package gcc-4.8.5-36.el7_6.2.x86_64 already installed and latest version
+    Package 1:openssl-1.0.2k-16.el7_6.1.x86_64 already installed and latest version
+    Package 1:openssl-devel-1.0.2k-16.el7_6.1.x86_64 already installed and latest version
+    Package libffi-devel-3.0.13-18.el7.x86_64 already installed and latest version
+    Package ca-certificates-2018.2.22-70.0.el7_5.noarch already installed and latest version
+    Package python-devel-2.7.5-77.el7_6.x86_64 already installed and latest version
+    Resolving Dependencies
+    --> Running transaction check
+    ---> Package augeas-libs.x86_64 0:1.4.0-6.el7_6.1 will be installed
+    ---> Package mod_ssl.x86_64 1:2.4.6-89.el7.centos will be installed
+    ---> Package python-tools.x86_64 0:2.7.5-77.el7_6 will be installed
+    --> Processing Dependency: tkinter = 2.7.5-77.el7_6 for package: python-tools-2.7.5-77.el7_6.x86_64
+    ---> Package python-virtualenv.noarch 0:15.1.0-2.el7 will be installed
+    ---> Package python2-pip.noarch 0:8.1.2-8.el7 will be installed
+    ---> Package redhat-rpm-config.noarch 0:9.1.0-87.el7.centos will be installed
+    --> Processing Dependency: dwz >= 0.4 for package: redhat-rpm-config-9.1.0-87.el7.centos.noarch
+    --> Processing Dependency: zip for package: redhat-rpm-config-9.1.0-87.el7.centos.noarch
+    --> Processing Dependency: perl-srpm-macros for package: redhat-rpm-config-9.1.0-87.el7.centos.noarch
+    --> Running transaction check
+    ---> Package dwz.x86_64 0:0.11-3.el7 will be installed
+    ---> Package perl-srpm-macros.noarch 0:1-8.el7 will be installed
+    ---> Package tkinter.x86_64 0:2.7.5-77.el7_6 will be installed
+    --> Processing Dependency: libtk8.5.so()(64bit) for package: tkinter-2.7.5-77.el7_6.x86_64
+    --> Processing Dependency: libtcl8.5.so()(64bit) for package: tkinter-2.7.5-77.el7_6.x86_64
+    --> Processing Dependency: libX11.so.6()(64bit) for package: tkinter-2.7.5-77.el7_6.x86_64
+    --> Processing Dependency: libTix.so()(64bit) for package: tkinter-2.7.5-77.el7_6.x86_64
+    ---> Package zip.x86_64 0:3.0-11.el7 will be installed
+    --> Running transaction check
+    ---> Package libX11.x86_64 0:1.6.5-2.el7 will be installed
+    --> Processing Dependency: libX11-common >= 1.6.5-2.el7 for package: libX11-1.6.5-2.el7.x86_64
+    --> Processing Dependency: libxcb.so.1()(64bit) for package: libX11-1.6.5-2.el7.x86_64
+    ---> Package tcl.x86_64 1:8.5.13-8.el7 will be installed
+    ---> Package tix.x86_64 1:8.4.3-12.el7 will be installed
+    ---> Package tk.x86_64 1:8.5.13-6.el7 will be installed
+    --> Processing Dependency: libXft.so.2()(64bit) for package: 1:tk-8.5.13-6.el7.x86_64
+    --> Running transaction check
+    ---> Package libX11-common.noarch 0:1.6.5-2.el7 will be installed
+    ---> Package libXft.x86_64 0:2.3.2-2.el7 will be installed
+    --> Processing Dependency: fontconfig >= 2.2-1 for package: libXft-2.3.2-2.el7.x86_64
+    --> Processing Dependency: libfontconfig.so.1()(64bit) for package: libXft-2.3.2-2.el7.x86_64
+    --> Processing Dependency: libXrender.so.1()(64bit) for package: libXft-2.3.2-2.el7.x86_64
+    ---> Package libxcb.x86_64 0:1.13-1.el7 will be installed
+    --> Processing Dependency: libXau.so.6()(64bit) for package: libxcb-1.13-1.el7.x86_64
+    --> Running transaction check
+    ---> Package fontconfig.x86_64 0:2.13.0-4.3.el7 will be installed
+    --> Processing Dependency: fontpackages-filesystem for package: fontconfig-2.13.0-4.3.el7.x86_64
+    --> Processing Dependency: dejavu-sans-fonts for package: fontconfig-2.13.0-4.3.el7.x86_64
+    ---> Package libXau.x86_64 0:1.0.8-2.1.el7 will be installed
+    ---> Package libXrender.x86_64 0:0.9.10-1.el7 will be installed
+    --> Running transaction check
+    ---> Package dejavu-sans-fonts.noarch 0:2.33-6.el7 will be installed
+    --> Processing Dependency: dejavu-fonts-common = 2.33-6.el7 for package: dejavu-sans-fonts-2.33-6.el7.noarch
+    ---> Package fontpackages-filesystem.noarch 0:1.44-8.el7 will be installed
+    --> Running transaction check
+    ---> Package dejavu-fonts-common.noarch 0:2.33-6.el7 will be installed
+    --> Finished Dependency Resolution
+
+    Dependencies Resolved
+
+    =======================================================================================================================================
+     Package                                 Arch                   Version                                  Repository               Size
+    =======================================================================================================================================
+    Installing:
+     augeas-libs                             x86_64                 1.4.0-6.el7_6.1                          updates                 355 k
+     mod_ssl                                 x86_64                 1:2.4.6-89.el7.centos                    updates                 112 k
+     python-tools                            x86_64                 2.7.5-77.el7_6                           updates                 856 k
+     python-virtualenv                       noarch                 15.1.0-2.el7                             base                    1.7 M
+     python2-pip                             noarch                 8.1.2-8.el7                              epel                    1.7 M
+     redhat-rpm-config                       noarch                 9.1.0-87.el7.centos                      base                     81 k
+    Installing for dependencies:
+     dejavu-fonts-common                     noarch                 2.33-6.el7                               base                     64 k
+     dejavu-sans-fonts                       noarch                 2.33-6.el7                               base                    1.4 M
+     dwz                                     x86_64                 0.11-3.el7                               base                     99 k
+     fontconfig                              x86_64                 2.13.0-4.3.el7                           base                    254 k
+     fontpackages-filesystem                 noarch                 1.44-8.el7                               base                    9.9 k
+     libX11                                  x86_64                 1.6.5-2.el7                              base                    606 k
+     libX11-common                           noarch                 1.6.5-2.el7                              base                    164 k
+     libXau                                  x86_64                 1.0.8-2.1.el7                            base                     29 k
+     libXft                                  x86_64                 2.3.2-2.el7                              base                     58 k
+     libXrender                              x86_64                 0.9.10-1.el7                             base                     26 k
+     libxcb                                  x86_64                 1.13-1.el7                               base                    214 k
+     perl-srpm-macros                        noarch                 1-8.el7                                  base                    4.6 k
+     tcl                                     x86_64                 1:8.5.13-8.el7                           base                    1.9 M
+     tix                                     x86_64                 1:8.4.3-12.el7                           base                    254 k
+     tk                                      x86_64                 1:8.5.13-6.el7                           base                    1.4 M
+     tkinter                                 x86_64                 2.7.5-77.el7_6                           updates                 326 k
+     zip                                     x86_64                 3.0-11.el7                               base                    260 k
+
+    Transaction Summary
+    =======================================================================================================================================
+    Install  6 Packages (+17 Dependent packages)
+
+    Total download size: 12 M
+    Installed size: 34 M
+    Is this ok [y/d/N]: y
+    Downloading packages:
+    (1/23): dejavu-fonts-common-2.33-6.el7.noarch.rpm                                                               |  64 kB  00:00:00     
+    (2/23): fontpackages-filesystem-1.44-8.el7.noarch.rpm                                                           | 9.9 kB  00:00:00     
+    (3/23): augeas-libs-1.4.0-6.el7_6.1.x86_64.rpm                                                                  | 355 kB  00:00:00     
+    (4/23): dwz-0.11-3.el7.x86_64.rpm                                                                               |  99 kB  00:00:00     
+    (5/23): fontconfig-2.13.0-4.3.el7.x86_64.rpm                                                                    | 254 kB  00:00:00     
+    (6/23): libXau-1.0.8-2.1.el7.x86_64.rpm                                                                         |  29 kB  00:00:00     
+    (7/23): libXft-2.3.2-2.el7.x86_64.rpm                                                                           |  58 kB  00:00:00     
+    (8/23): libxcb-1.13-1.el7.x86_64.rpm                                                                            | 214 kB  00:00:00     
+    (9/23): libXrender-0.9.10-1.el7.x86_64.rpm                                                                      |  26 kB  00:00:00     
+    (10/23): perl-srpm-macros-1-8.el7.noarch.rpm                                                                    | 4.6 kB  00:00:00     
+    (11/23): mod_ssl-2.4.6-89.el7.centos.x86_64.rpm                                                                 | 112 kB  00:00:00     
+    (12/23): dejavu-sans-fonts-2.33-6.el7.noarch.rpm                                                                | 1.4 MB  00:00:00     
+    (13/23): libX11-1.6.5-2.el7.x86_64.rpm                                                                          | 606 kB  00:00:00     
+    (14/23): libX11-common-1.6.5-2.el7.noarch.rpm                                                                   | 164 kB  00:00:00     
+    (15/23): python-virtualenv-15.1.0-2.el7.noarch.rpm                                                              | 1.7 MB  00:00:00     
+    (16/23): tcl-8.5.13-8.el7.x86_64.rpm                                                                            | 1.9 MB  00:00:00     
+    (17/23): redhat-rpm-config-9.1.0-87.el7.centos.noarch.rpm                                                       |  81 kB  00:00:00     
+    (18/23): tix-8.4.3-12.el7.x86_64.rpm                                                                            | 254 kB  00:00:00     
+    (19/23): zip-3.0-11.el7.x86_64.rpm                                                                              | 260 kB  00:00:00     
+    (20/23): python-tools-2.7.5-77.el7_6.x86_64.rpm                                                                 | 856 kB  00:00:00     
+    (21/23): tkinter-2.7.5-77.el7_6.x86_64.rpm                                                                      | 326 kB  00:00:00     
+    (22/23): python2-pip-8.1.2-8.el7.noarch.rpm                                                                     | 1.7 MB  00:00:00     
+    (23/23): tk-8.5.13-6.el7.x86_64.rpm                                                                             | 1.4 MB  00:00:00     
+    ---------------------------------------------------------------------------------------------------------------------------------------
+    Total                                                                                                   13 MB/s |  12 MB  00:00:00     
+    Running transaction check
+    Running transaction test
+    Transaction test succeeded
+    Running transaction
+      Installing : 1:tcl-8.5.13-8.el7.x86_64                                                                                          1/23 
+      Installing : fontpackages-filesystem-1.44-8.el7.noarch                                                                          2/23 
+      Installing : dejavu-fonts-common-2.33-6.el7.noarch                                                                              3/23 
+      Installing : dejavu-sans-fonts-2.33-6.el7.noarch                                                                                4/23 
+      Installing : fontconfig-2.13.0-4.3.el7.x86_64                                                                                   5/23 
+      Installing : dwz-0.11-3.el7.x86_64                                                                                              6/23 
+      Installing : libX11-common-1.6.5-2.el7.noarch                                                                                   7/23 
+      Installing : zip-3.0-11.el7.x86_64                                                                                              8/23 
+      Installing : libXau-1.0.8-2.1.el7.x86_64                                                                                        9/23 
+      Installing : libxcb-1.13-1.el7.x86_64                                                                                          10/23 
+      Installing : libX11-1.6.5-2.el7.x86_64                                                                                         11/23 
+      Installing : libXrender-0.9.10-1.el7.x86_64                                                                                    12/23 
+      Installing : libXft-2.3.2-2.el7.x86_64                                                                                         13/23 
+      Installing : 1:tk-8.5.13-6.el7.x86_64                                                                                          14/23 
+      Installing : 1:tix-8.4.3-12.el7.x86_64                                                                                         15/23 
+      Installing : tkinter-2.7.5-77.el7_6.x86_64                                                                                     16/23 
+      Installing : perl-srpm-macros-1-8.el7.noarch                                                                                   17/23 
+      Installing : redhat-rpm-config-9.1.0-87.el7.centos.noarch                                                                      18/23 
+      Installing : python-tools-2.7.5-77.el7_6.x86_64                                                                                19/23 
+      Installing : 1:mod_ssl-2.4.6-89.el7.centos.x86_64                                                                              20/23 
+      Installing : augeas-libs-1.4.0-6.el7_6.1.x86_64                                                                                21/23 
+      Installing : python-virtualenv-15.1.0-2.el7.noarch                                                                             22/23 
+      Installing : python2-pip-8.1.2-8.el7.noarch                                                                                    23/23 
+      Verifying  : 1:tcl-8.5.13-8.el7.x86_64                                                                                          1/23 
+      Verifying  : fontconfig-2.13.0-4.3.el7.x86_64                                                                                   2/23 
+      Verifying  : python-tools-2.7.5-77.el7_6.x86_64                                                                                 3/23 
+      Verifying  : libXrender-0.9.10-1.el7.x86_64                                                                                     4/23 
+      Verifying  : 1:tix-8.4.3-12.el7.x86_64                                                                                          5/23 
+      Verifying  : fontpackages-filesystem-1.44-8.el7.noarch                                                                          6/23 
+      Verifying  : tkinter-2.7.5-77.el7_6.x86_64                                                                                      7/23 
+      Verifying  : perl-srpm-macros-1-8.el7.noarch                                                                                    8/23 
+      Verifying  : dejavu-fonts-common-2.33-6.el7.noarch                                                                              9/23 
+      Verifying  : libxcb-1.13-1.el7.x86_64                                                                                          10/23 
+      Verifying  : libXft-2.3.2-2.el7.x86_64                                                                                         11/23 
+      Verifying  : redhat-rpm-config-9.1.0-87.el7.centos.noarch                                                                      12/23 
+      Verifying  : python2-pip-8.1.2-8.el7.noarch                                                                                    13/23 
+      Verifying  : 1:tk-8.5.13-6.el7.x86_64                                                                                          14/23 
+      Verifying  : libX11-1.6.5-2.el7.x86_64                                                                                         15/23 
+      Verifying  : dejavu-sans-fonts-2.33-6.el7.noarch                                                                               16/23 
+      Verifying  : python-virtualenv-15.1.0-2.el7.noarch                                                                             17/23 
+      Verifying  : libXau-1.0.8-2.1.el7.x86_64                                                                                       18/23 
+      Verifying  : zip-3.0-11.el7.x86_64                                                                                             19/23 
+      Verifying  : libX11-common-1.6.5-2.el7.noarch                                                                                  20/23 
+      Verifying  : dwz-0.11-3.el7.x86_64                                                                                             21/23 
+      Verifying  : augeas-libs-1.4.0-6.el7_6.1.x86_64                                                                                22/23 
+      Verifying  : 1:mod_ssl-2.4.6-89.el7.centos.x86_64                                                                              23/23 
+
+    Installed:
+      augeas-libs.x86_64 0:1.4.0-6.el7_6.1       mod_ssl.x86_64 1:2.4.6-89.el7.centos    python-tools.x86_64 0:2.7.5-77.el7_6             
+      python-virtualenv.noarch 0:15.1.0-2.el7    python2-pip.noarch 0:8.1.2-8.el7        redhat-rpm-config.noarch 0:9.1.0-87.el7.centos   
+
+    Dependency Installed:
+      dejavu-fonts-common.noarch 0:2.33-6.el7      dejavu-sans-fonts.noarch 0:2.33-6.el7            dwz.x86_64 0:0.11-3.el7               
+      fontconfig.x86_64 0:2.13.0-4.3.el7           fontpackages-filesystem.noarch 0:1.44-8.el7      libX11.x86_64 0:1.6.5-2.el7           
+      libX11-common.noarch 0:1.6.5-2.el7           libXau.x86_64 0:1.0.8-2.1.el7                    libXft.x86_64 0:2.3.2-2.el7           
+      libXrender.x86_64 0:0.9.10-1.el7             libxcb.x86_64 0:1.13-1.el7                       perl-srpm-macros.noarch 0:1-8.el7     
+      tcl.x86_64 1:8.5.13-8.el7                    tix.x86_64 1:8.4.3-12.el7                        tk.x86_64 1:8.5.13-6.el7              
+      tkinter.x86_64 0:2.7.5-77.el7_6              zip.x86_64 0:3.0-11.el7                         
+
+    Complete!
+    Creating virtual environment...
+    Installing Python packages...
+
+    Installation succeeded.
+    Saving debug log to /var/log/letsencrypt/letsencrypt.log
+    Plugins selected: Authenticator standalone, Installer None
+
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    Please read the Terms of Service at
+    https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf. You must
+    agree in order to register with the ACME server at
+    https://acme-v02.api.letsencrypt.org/directory
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    (A)gree/(C)ancel: (A)gree/(C)ancel: A    <-- 说明： 此处输入A，表示同意
+
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    Would you be willing to share your email address with the Electronic Frontier
+    Foundation, a founding partner of the Let's Encrypt project and the non-profit
+    organization that develops Certbot? We'd like to send you email about our work
+    encrypting the web, EFF news, campaigns, and ways to support digital freedom.
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    (Y)es/(N)o: Y        <-- 说明： 此处输入Y，表示确认
+    Obtaining a new certificate
+    Performing the following challenges:
+    http-01 challenge for hopewait.com
+    http-01 challenge for www.hopewait.com
+    Waiting for verification...
+    Cleaning up challenges
+
+    IMPORTANT NOTES:
+     - Congratulations! Your certificate and chain have been saved at:
+       /etc/letsencrypt/live/hopewait.com/fullchain.pem
+       Your key file has been saved at:
+       /etc/letsencrypt/live/hopewait.com/privkey.pem
+       Your cert will expire on 2019-09-14. To obtain a new or tweaked
+       version of this certificate in the future, simply run certbot-auto
+       again. To non-interactively renew *all* of your certificates, run
+       "certbot-auto renew"
+     - Your account credentials have been saved in your Certbot
+       configuration directory at /etc/letsencrypt. You should make a
+       secure backup of this folder now. This configuration directory will
+       also contain certificates and private keys obtained by Certbot so
+       making regular backups of this folder is ideal.
+     - If you like Certbot, please consider supporting our work by:
+
+       Donating to ISRG / Let's Encrypt:   https://letsencrypt.org/donate
+       Donating to EFF:                    https://eff.org/donate-le
+
+    [root@hopewait ~]# 
+
+查看证书文件::
+
+    [root@hopewait ~]# ls -lah /etc/letsencrypt/live/hopewait.com
+    total 4.0K
+    drwxr-xr-x. 2 root root  93 Jun 17 06:49 .
+    drwx------. 3 root root  40 Jun 17 06:49 ..
+    lrwxrwxrwx. 1 root root  36 Jun 17 06:49 cert.pem -> ../../archive/hopewait.com/cert1.pem
+    lrwxrwxrwx. 1 root root  37 Jun 17 06:49 chain.pem -> ../../archive/hopewait.com/chain1.pem
+    lrwxrwxrwx. 1 root root  41 Jun 17 06:49 fullchain.pem -> ../../archive/hopewait.com/fullchain1.pem
+    lrwxrwxrwx. 1 root root  39 Jun 17 06:49 privkey.pem -> ../../archive/hopewait.com/privkey1.pem
+    -rw-r--r--. 1 root root 692 Jun 17 06:49 README
+
+
+删除证书::
+
+    [root@hopewait ~]# /root/letsencrypt/certbot-auto delete
+    Saving debug log to /var/log/letsencrypt/letsencrypt.log
+
+    Which certificate(s) would you like to delete?
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    1: hopewait.com
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    Select the appropriate numbers separated by commas and/or spaces, or leave input
+    blank to select all options shown (Enter 'c' to cancel): 1
+
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    Deleted all files relating to certificate hopewait.com.
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    [root@hopewait ~]# ls -lah /etc/letsencrypt/live/
+    total 4.0K
+    drwx------. 2 root root  20 Jun 17 22:18 .
+    drwxr-xr-x. 9 root root 108 Jun 17 22:18 ..
+    -rw-r--r--. 1 root root 740 Jun 17 06:49 README
+    [root@hopewait ~]# 
+
+即删除证书时，会将证书文件夹删除，并删除归档文件archive中的证书文件夹。
+
+重新生成证书文件::
+
+    [root@hopewait ~]# /root/letsencrypt/certbot-auto certonly --standalone --redirect --email mzh@hopewait.com -d hopewait.com -d www.hopewait.com
+    Saving debug log to /var/log/letsencrypt/letsencrypt.log
+    Plugins selected: Authenticator standalone, Installer None
+    Obtaining a new certificate
+
+    IMPORTANT NOTES:
+     - Congratulations! Your certificate and chain have been saved at:
+       /etc/letsencrypt/live/hopewait.com/fullchain.pem
+       Your key file has been saved at:
+       /etc/letsencrypt/live/hopewait.com/privkey.pem
+       Your cert will expire on 2019-09-15. To obtain a new or tweaked
+       version of this certificate in the future, simply run certbot-auto
+       again. To non-interactively renew *all* of your certificates, run
+       "certbot-auto renew"
+     - If you like Certbot, please consider supporting our work by:
+
+       Donating to ISRG / Let's Encrypt:   https://letsencrypt.org/donate
+       Donating to EFF:                    https://eff.org/donate-le
+
+    [root@hopewait ~]# ls -lah /etc/letsencrypt/archive/
+    total 0
+    drwx------. 3 root root  26 Jun 17 22:25 .
+    drwxr-xr-x. 9 root root 108 Jun 17 22:25 ..
+    drwxr-xr-x. 2 root root  83 Jun 17 22:25 hopewait.com
+    
+    [root@hopewait ~]# ls -lah /etc/letsencrypt/live/hopewait.com/
+    total 4.0K
+    drwxr-xr-x. 2 root root  93 Jun 17 22:25 .
+    drwx------. 3 root root  40 Jun 17 22:25 ..
+    lrwxrwxrwx. 1 root root  36 Jun 17 22:25 cert.pem -> ../../archive/hopewait.com/cert1.pem
+    lrwxrwxrwx. 1 root root  37 Jun 17 22:25 chain.pem -> ../../archive/hopewait.com/chain1.pem
+    lrwxrwxrwx. 1 root root  41 Jun 17 22:25 fullchain.pem -> ../../archive/hopewait.com/fullchain1.pem
+    lrwxrwxrwx. 1 root root  39 Jun 17 22:25 privkey.pem -> ../../archive/hopewait.com/privkey1.pem
+    -rw-r--r--. 1 root root 692 Jun 17 22:25 README
+
+在"/etc/letsencrypt/live/hopewait.com/"域名目录下有4个文件就是生成的密钥证书文件::
+
+    cert.pem     <-- 说明：letsencrypt服务器端颁发的证书文件
+    chain.pem     <-- 说明：根证书和中继证书
+    fullchain.pem     <-- 说明：Nginx所需要ssl_certificate文件
+    privkey.pem     <-- 说明：安全证书KEY文件，密钥文件
+
+配置Apache
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+使用Apache需要使用 ``cert.pem``、 ``chain.pem``、 ``privkey.pem`` 三个文件。
+
+配置 ``/etc/httpd/conf.d/ssl.conf`` 文件::
+
+    [root@hopewait ~]# cat -n /etc/httpd/conf.d/ssl.conf|sed -n '95,117p'
+        95  #   Server Certificate:
+        96  # Point SSLCertificateFile at a PEM encoded certificate.  If
+        97  # the certificate is encrypted, then you will be prompted for a
+        98  # pass phrase.  Note that a kill -HUP will prompt again.  A new
+        99  # certificate can be generated using the genkey(1) command.
+       100  SSLCertificateFile /etc/letsencrypt/live/hopewait.com/cert.pem   <-- 说明：letsencrypt服务器端颁发的证书文件
+       101
+       102  #   Server Private Key:
+       103  #   If the key is not combined with the certificate, use this
+       104  #   directive to point at the key file.  Keep in mind that if
+       105  #   you've both a RSA and a DSA private key you can configure
+       106  #   both in parallel (to also allow the use of DSA ciphers, etc.)
+       107  SSLCertificateKeyFile /etc/letsencrypt/live/hopewait.com/privkey.pem     <-- 说明：安全证书KEY文件，密钥文件
+       108
+       109  #   Server Certificate Chain:
+       110  #   Point SSLCertificateChainFile at a file containing the
+       111  #   concatenation of PEM encoded CA certificates which form the
+       112  #   certificate chain for the server certificate. Alternatively
+       113  #   the referenced file can be the same as SSLCertificateFile
+       114  #   when the CA certificates are directly appended to the server
+       115  #   certificate for convinience.
+       116  SSLCertificateChainFile /etc/letsencrypt/live/hopewait.com/chain.pem    <-- 说明：根证书和中继证书
+       117
+
+配置http重定向https::
+
+    [root@hopewait ~]# cat > /etc/httpd/conf.d/http2https.conf << EOF
+    > <VirtualHost *:80>
+    >     ServerName hopewait.com
+    >     RewriteEngine on
+    >     RewriteCond %{SERVER_PORT} !^443$
+    >     RewriteRule ^/?(.*)$ https://%{SERVER_NAME}/$1 [L,R]
+    > </VirtualHost>
+    > EOF
+    [root@hopewait ~]# cat /etc/httpd/conf.d/http2https.conf 
+    <VirtualHost *:80>
+        ServerName hopewait.com
+        RewriteEngine on
+        RewriteCond %{SERVER_PORT} !^443$
+        RewriteRule ^/?(.*)$ https://%{SERVER_NAME}/ [L,R]
+    </VirtualHost>
+
+测试Apache服务::
+
+    [root@hopewait ~]# httpd -t
+    Syntax OK
+    [root@hopewait ~]# systemctl restart httpd
+
+使用google浏览器打开 http://hopewait.com/ 链接或 http://www.hopewait.com/  时，会自动跳转到  https://hopewait.com/ 链接或 https://www.hopewait.com/ 链接，此时查看证书的详情:
+
+.. image:: ./_static/images/LetsEncrypt_cert.png
+
+可以看到证书的颁发者是"Let's Encrypt Authority X3"和使用者是"hopewait.com"，有效期从2019年6月17日至2019年9月15日，并且浏览器提示"连接是安全的"、"证书有效"。
+
+为测试nginx服务，先停止httpd服务::
+
+    [root@hopewait ~]# netstat -tunlp|grep httpd
+    tcp6       0      0 :::80                   :::*                    LISTEN      1505/httpd          
+    tcp6       0      0 :::443                  :::*                    LISTEN      1505/httpd          
+    [root@hopewait ~]# systemctl stop httpd
+    [root@hopewait ~]# netstat -tunlp|grep httpd
+
+配置Nginx
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+安装nginx::
+
+    [root@hopewait ~]# yum install nginx 
+    Loaded plugins: fastestmirror
+    Loading mirror speeds from cached hostfile
+    epel/x86_64/metalink                                                                                            |  19 kB  00:00:00     
+     * base: mirror.sfo12.us.leaseweb.net
+     * epel: mirror.layeronline.com
+     * extras: mirror.fileplanet.com
+     * updates: mirror.fileplanet.com
+    base                                                                                                            | 3.6 kB  00:00:00     
+    extras                                                                                                          | 3.4 kB  00:00:00     
+    ius                                                                                                             | 1.3 kB  00:00:00     
+    updates                                                                                                         | 3.4 kB  00:00:00     
+    Resolving Dependencies
+    --> Running transaction check
+    ---> Package nginx.x86_64 1:1.12.2-3.el7 will be installed
+    --> Processing Dependency: nginx-all-modules = 1:1.12.2-3.el7 for package: 1:nginx-1.12.2-3.el7.x86_64
+    --> Processing Dependency: nginx-filesystem = 1:1.12.2-3.el7 for package: 1:nginx-1.12.2-3.el7.x86_64
+    --> Processing Dependency: nginx-filesystem for package: 1:nginx-1.12.2-3.el7.x86_64
+    --> Processing Dependency: libprofiler.so.0()(64bit) for package: 1:nginx-1.12.2-3.el7.x86_64
+    --> Running transaction check
+    ---> Package gperftools-libs.x86_64 0:2.6.1-1.el7 will be installed
+    ---> Package nginx-all-modules.noarch 1:1.12.2-3.el7 will be installed
+    --> Processing Dependency: nginx-mod-http-geoip = 1:1.12.2-3.el7 for package: 1:nginx-all-modules-1.12.2-3.el7.noarch
+    --> Processing Dependency: nginx-mod-http-image-filter = 1:1.12.2-3.el7 for package: 1:nginx-all-modules-1.12.2-3.el7.noarch
+    --> Processing Dependency: nginx-mod-http-perl = 1:1.12.2-3.el7 for package: 1:nginx-all-modules-1.12.2-3.el7.noarch
+    --> Processing Dependency: nginx-mod-http-xslt-filter = 1:1.12.2-3.el7 for package: 1:nginx-all-modules-1.12.2-3.el7.noarch
+    --> Processing Dependency: nginx-mod-mail = 1:1.12.2-3.el7 for package: 1:nginx-all-modules-1.12.2-3.el7.noarch
+    --> Processing Dependency: nginx-mod-stream = 1:1.12.2-3.el7 for package: 1:nginx-all-modules-1.12.2-3.el7.noarch
+    ---> Package nginx-filesystem.noarch 1:1.12.2-3.el7 will be installed
+    --> Running transaction check
+    ---> Package nginx-mod-http-geoip.x86_64 1:1.12.2-3.el7 will be installed
+    ---> Package nginx-mod-http-image-filter.x86_64 1:1.12.2-3.el7 will be installed
+    --> Processing Dependency: gd for package: 1:nginx-mod-http-image-filter-1.12.2-3.el7.x86_64
+    --> Processing Dependency: libgd.so.2()(64bit) for package: 1:nginx-mod-http-image-filter-1.12.2-3.el7.x86_64
+    ---> Package nginx-mod-http-perl.x86_64 1:1.12.2-3.el7 will be installed
+    ---> Package nginx-mod-http-xslt-filter.x86_64 1:1.12.2-3.el7 will be installed
+    --> Processing Dependency: libxslt.so.1(LIBXML2_1.0.11)(64bit) for package: 1:nginx-mod-http-xslt-filter-1.12.2-3.el7.x86_64
+    --> Processing Dependency: libxslt.so.1(LIBXML2_1.0.18)(64bit) for package: 1:nginx-mod-http-xslt-filter-1.12.2-3.el7.x86_64
+    --> Processing Dependency: libexslt.so.0()(64bit) for package: 1:nginx-mod-http-xslt-filter-1.12.2-3.el7.x86_64
+    --> Processing Dependency: libxslt.so.1()(64bit) for package: 1:nginx-mod-http-xslt-filter-1.12.2-3.el7.x86_64
+    ---> Package nginx-mod-mail.x86_64 1:1.12.2-3.el7 will be installed
+    ---> Package nginx-mod-stream.x86_64 1:1.12.2-3.el7 will be installed
+    --> Running transaction check
+    ---> Package gd.x86_64 0:2.0.35-26.el7 will be installed
+    --> Processing Dependency: libjpeg.so.62(LIBJPEG_6.2)(64bit) for package: gd-2.0.35-26.el7.x86_64
+    --> Processing Dependency: libjpeg.so.62()(64bit) for package: gd-2.0.35-26.el7.x86_64
+    --> Processing Dependency: libXpm.so.4()(64bit) for package: gd-2.0.35-26.el7.x86_64
+    ---> Package libxslt.x86_64 0:1.1.28-5.el7 will be installed
+    --> Running transaction check
+    ---> Package libXpm.x86_64 0:3.5.12-1.el7 will be installed
+    ---> Package libjpeg-turbo.x86_64 0:1.2.90-6.el7 will be installed
+    --> Finished Dependency Resolution
+
+    Dependencies Resolved
+
+    =======================================================================================================================================
+     Package                                       Arch                     Version                           Repository              Size
+    =======================================================================================================================================
+    Installing:
+     nginx                                         x86_64                   1:1.12.2-3.el7                    epel                   531 k
+    Installing for dependencies:
+     gd                                            x86_64                   2.0.35-26.el7                     base                   146 k
+     gperftools-libs                               x86_64                   2.6.1-1.el7                       base                   272 k
+     libXpm                                        x86_64                   3.5.12-1.el7                      base                    55 k
+     libjpeg-turbo                                 x86_64                   1.2.90-6.el7                      base                   134 k
+     libxslt                                       x86_64                   1.1.28-5.el7                      base                   242 k
+     nginx-all-modules                             noarch                   1:1.12.2-3.el7                    epel                    16 k
+     nginx-filesystem                              noarch                   1:1.12.2-3.el7                    epel                    17 k
+     nginx-mod-http-geoip                          x86_64                   1:1.12.2-3.el7                    epel                    23 k
+     nginx-mod-http-image-filter                   x86_64                   1:1.12.2-3.el7                    epel                    27 k
+     nginx-mod-http-perl                           x86_64                   1:1.12.2-3.el7                    epel                    36 k
+     nginx-mod-http-xslt-filter                    x86_64                   1:1.12.2-3.el7                    epel                    26 k
+     nginx-mod-mail                                x86_64                   1:1.12.2-3.el7                    epel                    54 k
+     nginx-mod-stream                              x86_64                   1:1.12.2-3.el7                    epel                    76 k
+
+    Transaction Summary
+    =======================================================================================================================================
+    Install  1 Package (+13 Dependent packages)
+
+    Total download size: 1.6 M
+    Installed size: 4.7 M
+    Is this ok [y/d/N]: y
+    Downloading packages:
+    (1/14): gd-2.0.35-26.el7.x86_64.rpm                                                                             | 146 kB  00:00:00     
+    (2/14): libXpm-3.5.12-1.el7.x86_64.rpm                                                                          |  55 kB  00:00:00     
+    (3/14): libjpeg-turbo-1.2.90-6.el7.x86_64.rpm                                                                   | 134 kB  00:00:00     
+    (4/14): gperftools-libs-2.6.1-1.el7.x86_64.rpm                                                                  | 272 kB  00:00:00     
+    (5/14): libxslt-1.1.28-5.el7.x86_64.rpm                                                                         | 242 kB  00:00:00     
+    (6/14): nginx-1.12.2-3.el7.x86_64.rpm                                                                           | 531 kB  00:00:00     
+    (7/14): nginx-all-modules-1.12.2-3.el7.noarch.rpm                                                               |  16 kB  00:00:00     
+    (8/14): nginx-filesystem-1.12.2-3.el7.noarch.rpm                                                                |  17 kB  00:00:00     
+    (9/14): nginx-mod-http-geoip-1.12.2-3.el7.x86_64.rpm                                                            |  23 kB  00:00:00     
+    (10/14): nginx-mod-http-image-filter-1.12.2-3.el7.x86_64.rpm                                                    |  27 kB  00:00:00     
+    (11/14): nginx-mod-http-perl-1.12.2-3.el7.x86_64.rpm                                                            |  36 kB  00:00:00     
+    (12/14): nginx-mod-http-xslt-filter-1.12.2-3.el7.x86_64.rpm                                                     |  26 kB  00:00:00     
+    (13/14): nginx-mod-mail-1.12.2-3.el7.x86_64.rpm                                                                 |  54 kB  00:00:00     
+    (14/14): nginx-mod-stream-1.12.2-3.el7.x86_64.rpm                                                               |  76 kB  00:00:00     
+    ---------------------------------------------------------------------------------------------------------------------------------------
+    Total                                                                                                  1.7 MB/s | 1.6 MB  00:00:00     
+    Running transaction check
+    Running transaction test
+    Transaction test succeeded
+    Running transaction
+      Installing : libjpeg-turbo-1.2.90-6.el7.x86_64                                                                                  1/14 
+      Installing : 1:nginx-filesystem-1.12.2-3.el7.noarch                                                                             2/14 
+      Installing : gperftools-libs-2.6.1-1.el7.x86_64                                                                                 3/14 
+      Installing : libxslt-1.1.28-5.el7.x86_64                                                                                        4/14 
+      Installing : libXpm-3.5.12-1.el7.x86_64                                                                                         5/14 
+      Installing : gd-2.0.35-26.el7.x86_64                                                                                            6/14 
+      Installing : 1:nginx-mod-http-xslt-filter-1.12.2-3.el7.x86_64                                                                   7/14 
+      Installing : 1:nginx-mod-http-perl-1.12.2-3.el7.x86_64                                                                          8/14 
+      Installing : 1:nginx-mod-mail-1.12.2-3.el7.x86_64                                                                               9/14 
+      Installing : 1:nginx-mod-stream-1.12.2-3.el7.x86_64                                                                            10/14 
+      Installing : 1:nginx-mod-http-geoip-1.12.2-3.el7.x86_64                                                                        11/14 
+      Installing : 1:nginx-1.12.2-3.el7.x86_64                                                                                       12/14 
+      Installing : 1:nginx-mod-http-image-filter-1.12.2-3.el7.x86_64                                                                 13/14 
+      Installing : 1:nginx-all-modules-1.12.2-3.el7.noarch                                                                           14/14 
+      Verifying  : libXpm-3.5.12-1.el7.x86_64                                                                                         1/14 
+      Verifying  : 1:nginx-all-modules-1.12.2-3.el7.noarch                                                                            2/14 
+      Verifying  : 1:nginx-mod-http-xslt-filter-1.12.2-3.el7.x86_64                                                                   3/14 
+      Verifying  : 1:nginx-mod-http-perl-1.12.2-3.el7.x86_64                                                                          4/14 
+      Verifying  : libxslt-1.1.28-5.el7.x86_64                                                                                        5/14 
+      Verifying  : 1:nginx-mod-http-image-filter-1.12.2-3.el7.x86_64                                                                  6/14 
+      Verifying  : gperftools-libs-2.6.1-1.el7.x86_64                                                                                 7/14 
+      Verifying  : gd-2.0.35-26.el7.x86_64                                                                                            8/14 
+      Verifying  : 1:nginx-1.12.2-3.el7.x86_64                                                                                        9/14 
+      Verifying  : 1:nginx-filesystem-1.12.2-3.el7.noarch                                                                            10/14 
+      Verifying  : 1:nginx-mod-mail-1.12.2-3.el7.x86_64                                                                              11/14 
+      Verifying  : 1:nginx-mod-stream-1.12.2-3.el7.x86_64                                                                            12/14 
+      Verifying  : 1:nginx-mod-http-geoip-1.12.2-3.el7.x86_64                                                                        13/14 
+      Verifying  : libjpeg-turbo-1.2.90-6.el7.x86_64                                                                                 14/14 
+
+    Installed:
+      nginx.x86_64 1:1.12.2-3.el7                                                                                                          
+
+    Dependency Installed:
+      gd.x86_64 0:2.0.35-26.el7                                             gperftools-libs.x86_64 0:2.6.1-1.el7                          
+      libXpm.x86_64 0:3.5.12-1.el7                                          libjpeg-turbo.x86_64 0:1.2.90-6.el7                           
+      libxslt.x86_64 0:1.1.28-5.el7                                         nginx-all-modules.noarch 1:1.12.2-3.el7                       
+      nginx-filesystem.noarch 1:1.12.2-3.el7                                nginx-mod-http-geoip.x86_64 1:1.12.2-3.el7                    
+      nginx-mod-http-image-filter.x86_64 1:1.12.2-3.el7                     nginx-mod-http-perl.x86_64 1:1.12.2-3.el7                     
+      nginx-mod-http-xslt-filter.x86_64 1:1.12.2-3.el7                      nginx-mod-mail.x86_64 1:1.12.2-3.el7                          
+      nginx-mod-stream.x86_64 1:1.12.2-3.el7                               
+
+    Complete!
+    [root@hopewait ~]# nginx -v
+    nginx version: nginx/1.12.2
+
+配置nginx配置文件::
+
+    [root@hopewait ~]# cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+    [root@hopewait ~]# cat -n /etc/nginx/nginx.conf|sed -n '36,91p'
+        36      include /etc/nginx/conf.d/*.conf;
+        37
+        38      server {
+        39          listen       80 default_server;
+        40  #         listen       [::]:80 default_server;
+        41           server_name  hopewait.com;
+        42           rewrite ^(.*)$ https://${server_name}$1 permanent; 
+        43  #         root         /usr/share/nginx/html;
+        44  # 
+        45  #         # Load configuration files for the default server block.
+        46  #         include /etc/nginx/default.d/*.conf;
+        47  # 
+        48  #         location / {
+        49  #         }
+        50  # 
+        51  #         error_page 404 /404.html;
+        52  #             location = /40x.html {
+        53  #         }
+        54  # 
+        55  #         error_page 500 502 503 504 /50x.html;
+        56  #             location = /50x.html {
+        57  #         }
+        58      }
+        59
+        60  # Settings for a TLS enabled server.
+        61
+        62      server {
+        63          listen       443 ssl http2 default_server;
+        64          listen       [::]:443 ssl http2 default_server;
+        65          server_name  hopewait.com;
+        66          root         /usr/share/nginx/html;
+        67
+        68          ssl_certificate "/etc/letsencrypt/live/hopewait.com/fullchain.pem";
+        69          ssl_certificate_key "/etc/letsencrypt/live/hopewait.com/privkey.pem"; 
+        70          ssl_session_cache shared:SSL:1m;
+        71          ssl_session_timeout  10m;
+        72          ssl_ciphers HIGH:!aNULL:!MD5;
+        73          ssl_prefer_server_ciphers on;
+        74
+        75          # Load configuration files for the default server block.
+        76          include /etc/nginx/default.d/*.conf;
+        77
+        78          location / {
+        79          }
+        80
+        81          error_page 404 /404.html;
+        82              location = /40x.html {
+        83          }
+        84
+        85          error_page 500 502 503 504 /50x.html;
+        86              location = /50x.html {
+        87          }
+        88      }
+        89
+        90  }
+        91
+
+测试Nginx服务::
+
+    [root@hopewait ~]# nginx -t 
+    nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+    nginx: configuration file /etc/nginx/nginx.conf test is successful
+    [root@hopewait ~]# systemctl start nginx
+    [root@hopewait ~]# netstat -tunlp|grep nginx
+    tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      1715/nginx: master  
+    tcp        0      0 0.0.0.0:443             0.0.0.0:*               LISTEN      1715/nginx: master  
+    tcp6       0      0 :::443                  :::*                    LISTEN      1715/nginx: master 
+
+
+使用google浏览器打开 http://hopewait.com/ 链接或 http://www.hopewait.com/  时，会自动跳转到  https://hopewait.com/ 链接，此时查看证书的详情:
+
+.. image:: ./_static/images/LetsEncrypt_nginx.png
+
+可以看到证书的颁发者是"Let's Encrypt Authority X3"和使用者是"hopewait.com"，有效期从2019年6月17日至2019年9月15日，并且浏览器提示"连接是安全的"、"证书有效"。
+
+自动续签证书
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+手动续签证书::
+
+    [root@hopewait ~]# /root/letsencrypt/certbot-auto renew  --force-renewal       
+    Saving debug log to /var/log/letsencrypt/letsencrypt.log
+
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    Processing /etc/letsencrypt/renewal/hopewait.com.conf
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    Plugins selected: Authenticator standalone, Installer None
+    Renewing an existing certificate
+
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    new certificate deployed without reload, fullchain is
+    /etc/letsencrypt/live/hopewait.com/fullchain.pem
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    Congratulations, all renewals succeeded. The following certs have been renewed:
+      /etc/letsencrypt/live/hopewait.com/fullchain.pem (success)
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+安静模式手动续签证书::
+
+    [root@hopewait ~]# /root/letsencrypt/certbot-auto renew --quiet --force-renewal
+
+增加定时任务::
+
+    [root@hopewait ~]# crontab -l
+    30 23 * * * /root/letsencrypt/certbot-auto renew --quiet --force-renewal
+
+可以隔段时间再检查证书是否有效。
+  
+参考文献：
 
 CentOS 7搭建CA认证中心实现https取证  https://www.cnblogs.com/bigdevilking/p/9434444.html
 
 openssl 命令(1): openssl req命令详解 https://blog.csdn.net/abccheng/article/details/82622899
+
+快速签发 Let's Encrypt 证书指南 https://www.cnblogs.com/esofar/p/9291685.html
+
+ACME Client Implementations https://letsencrypt.org/docs/client-options/
+
+Certbot User Guide https://certbot.eff.org/docs/using.html#command-line-options
+
+实战申请Let's Encrypt永久免费SSL证书过程教程及常见问题 https://www.cnblogs.com/tv151579/p/8268356.html
+
+Let's Encrypt证书自动更新 https://blog.csdn.net/shasharoman/article/details/80915222
+
