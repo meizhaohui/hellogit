@@ -2847,6 +2847,57 @@ Let's Encrypt免费证书默认是90天有效期，后面我们需要设置自�
     30 23 * * * /root/letsencrypt/certbot-auto renew --quiet --force-renewal
 
 可以隔段时间再检查证书是否有效。
+
+频繁续签证书会提示续签失败::
+
+    [root@hopewait ~]# /root/letsencrypt/certbot-auto renew --force-renewal
+    Saving debug log to /var/log/letsencrypt/letsencrypt.log
+
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    Processing /etc/letsencrypt/renewal/hopewait.com.conf
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    Plugins selected: Authenticator standalone, Installer None
+    Renewing an existing certificate
+    Attempting to renew cert (hopewait.com) from /etc/letsencrypt/renewal/hopewait.com.conf produced an unexpected error: urn:ietf:params:acme:error:rateLimited :: There were too many requests of a given type :: Error creating new order :: too many certificates already issued for exact set of domains: hopewait.com,www.hopewait.com: see https://letsencrypt.org/docs/rate-limits/. Skipping.
+    All renewal attempts failed. The following certs could not be renewed:
+      /etc/letsencrypt/live/hopewait.com/fullchain.pem (failure)
+
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    All renewal attempts failed. The following certs could not be renewed:
+      /etc/letsencrypt/live/hopewait.com/fullchain.pem (failure)
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    1 renew failure(s), 0 parse failure(s)
+
+参考 https://letsencrypt.org/docs/rate-limits/ 说明可知:
+
+- Renewals are treated specially: they don’t count against your Certificates per Registered Domain limit, but they are subject to a Duplicate Certificate limit of 5 per week. (即每周的重复证书限制为5)
+- There is a Failed Validation limit of 5 failures per account, per hostname, per hour. This limit is higher on our staging environment, so you can use that environment to debug connectivity problems.(每个账户每个主机名每小时有5个失败的失败验证限制！可以使用模拟环境测试连接问题)
+
+模拟环境说明 https://letsencrypt.org/docs/staging-environment/ ：
+
+- The Failed Validations limit is 60 per hour. (即每小时可以失败60次验证！比生产环境5次高多了！)
+
+所以我们更新crontab的自动续签的频率::
+
+    [root@hopewait ~]# crontab -l
+    SHELL=/bin/bash
+    PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+    # For details see man 4 crontabs
+
+    # Example of job definition:
+    # .---------------- minute (0 - 59)
+    # |  .------------- hour (0 - 23)
+    # |  |  .---------- day of month (1 - 31)
+    # |  |  |  .------- month (1 - 12) OR jan,feb,mar,apr ...
+    # |  |  |  |  .---- day of week (0 - 6) (Sunday=0 or 7) OR sun,mon,tue,wed,thu,fri,sat
+    # |  |  |  |  |
+    # *  *  *  *  * user-name  command to be executed
+    # every two month to renew the CA at the first day 
+    30 8 1 */2 * /root/letsencrypt/certbot-auto renew --quiet --force-renewal
+
+这样每两个月的1号早上8:30会续签一次。下次续签后检查有效期是否续签成功！
   
 参考文献：
 
