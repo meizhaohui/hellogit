@@ -630,14 +630,13 @@ WEB SERVER配置的原始信息::
     973 # web_server['uid'] = nil
     974 # web_server['gid'] = nil
     975 # web_server['shell'] = '/bin/false'
-    976 web_server['home'] = '/var/opt/gitlab/nginx'
+    976 # web_server['home'] = '/var/opt/gitlab/nginx'
 
 使用命令修改::
 
     [root@server ~]# sed -i "970s@^# web_server\['external_users'\] = \[\]@web_server\['external_users'\] = \['nginx', 'root'\]@g" /etc/gitlab/gitlab.rb
     [root@server ~]# sed -i "971s@^# web_server\['username'\] = 'gitlab-www'@web_server\['username'\] = 'nginx'@g" /etc/gitlab/gitlab.rb
     [root@server ~]# sed -i "972s@^# web_server\['group'\] = 'gitlab-www'@web_server\['group'\] = 'nginx'@g" /etc/gitlab/gitlab.rb
-    [root@server ~]# sed -i "976s@^# web_server\['home'\]@web_server\['home'\]@g" /etc/gitlab/gitlab.rb
     [root@server ~]# cat -n /etc/gitlab/gitlab.rb|sed -n '970,976p'
        970  web_server['external_users'] = ['nginx', 'root']
        971  web_server['username'] = 'nginx'
@@ -645,7 +644,7 @@ WEB SERVER配置的原始信息::
        973  # web_server['uid'] = nil
        974  # web_server['gid'] = nil
        975  # web_server['shell'] = '/bin/false'
-       976  web_server['home'] = '/var/opt/gitlab/nginx'
+       976  # web_server['home'] = '/var/opt/gitlab/nginx'
 
 安装外部Nginx服务::
 
@@ -2134,8 +2133,10 @@ GitLab常用命令
 初始化GitLab配置文件的脚本文件
 -------------------------------------------------
 
-- [初始化GitLab配置文件的脚本文件](./source/scripts/init_gitlab_conf.sh)
- 
+- `初始化GitLab配置文件的脚本文件 <./source/scripts/init_gitlab_conf.sh>`_
+
+init_gitlab_conf.sh脚本内容如下::
+
     #!/bin/bash
     # Filename: init_gitlab_conf.sh
     # Author: Zhaohui Mei
