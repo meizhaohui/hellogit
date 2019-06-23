@@ -2133,7 +2133,7 @@ GitLab常用命令
 初始化GitLab配置文件的脚本文件
 -------------------------------------------------
 
-- `初始化GitLab配置文件的脚本文件 <./source/scripts/init_gitlab_conf.sh>`_
+- `初始化GitLab配置文件的脚本文件 <https://github.com/meizhaohui/hellogit/blob/master/source/scripts/init_gitlab_conf.sh>`_
 
 init_gitlab_conf.sh脚本内容如下::
 
