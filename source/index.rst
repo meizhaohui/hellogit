@@ -14,3 +14,4 @@ Welcome to hellogit's documentation!
     install_git
     certificate_authority_for_https
     centos7_install_gitlab_with_external_nginx
+    configure_gitlab_i18n_and_create_gitlab_ci_with_gitlab_runner
