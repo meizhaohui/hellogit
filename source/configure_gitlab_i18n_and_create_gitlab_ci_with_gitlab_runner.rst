@@ -148,3 +148,212 @@ GitLab汉化
     [root@server ~]# du -sh /opt/gitlab/embedded/service/gitlab-rails* 
     253M    /opt/gitlab/embedded/service/gitlab-rails
     253M    /opt/gitlab/embedded/service/gitlab-rails.bak
+
+去除cp的别名，复制gitlab汉化包中的文件到 ``/opt/gitlab/embedded/service/gitlab-rails/`` 目录下::
+
+    [root@server ~]# alias cp
+    alias cp='cp -i'
+    [root@server ~]# unalias cp
+    [root@server ~]# cp -rf gitlab/* /opt/gitlab/embedded/service/gitlab-rails/
+    cp: cannot overwrite non-directory ‘/opt/gitlab/embedded/service/gitlab-rails/log’ with directory ‘gitlab/log’
+    cp: cannot overwrite non-directory ‘/opt/gitlab/embedded/service/gitlab-rails/tmp’ with directory ‘gitlab/tmp’
+
+使配置生效::
+
+    [root@server ~]# systemctl start gitlab-runsvdir
+    [root@server ~]# gitlab-ctl reconfigure
+    ...... 执行剧本，忽略
+    Running handlers:
+    Running handlers complete
+    Chef Client finished, 5/609 resources updated in 01 minutes 10 seconds
+    gitlab Reconfigured!
+    [root@server ~]# 
+
+启动GitLab和Nginx::
+
+    [root@server ~]# gitlab-ctl start
+    ok: run: alertmanager: (pid 22346) 697s
+    ok: run: gitaly: (pid 22326) 697s
+    ok: run: gitlab-monitor: (pid 22340) 697s
+    ok: run: gitlab-workhorse: (pid 22334) 697s
+    ok: run: logrotate: (pid 22336) 697s
+    ok: run: node-exporter: (pid 22338) 697s
+    ok: run: postgres-exporter: (pid 22348) 697s
+    ok: run: postgresql: (pid 22328) 697s
+    ok: run: prometheus: (pid 22344) 697s
+    ok: run: redis: (pid 22324) 697s
+    ok: run: redis-exporter: (pid 22342) 697s
+    ok: run: sidekiq: (pid 22332) 697s
+    ok: run: unicorn: (pid 22330) 697s
+    [root@server ~]# systemctl start nginx
+    [root@server ~]# 
+
+
+访问GitLab服务 http://192.168.56.14 ，发现可以正常访问，并显示中文的页面：
+
+.. image:: ./_static/images/gitlab_chinese_login_page.png
+
+点击右上角的个人图标，在弹出的下拉选项中点击  ``Settings`` 进入到 ``Settings`` 设置界面：
+
+.. image:: ./_static/images/gitlab_setting.png
+
+点击左侧的 ``preferences`` 标签页，进入到个人偏好设置界面，下拉到 ``Localization`` 本地化的位置：
+
+.. image:: ./_static/images/gitlab_preferences.png
+
+点击 ``Language`` 语言下拉框选择 "简体中文"，并将周一设置为每周的第一天，并点击 ``Save changes`` 保存修改：
+
+.. image:: ./_static/images/gitlab_change_language.png
+
+保存后，按F5刷新一下页面，可以看到页面显示已经变成中文了：
+
+.. image:: ./_static/images/gitlab_preferences_chinese.png
+
+修改图像时，保存时，提示 "Request failed with status code 500" 异常，查看日志信息::
+
+    [root@server ~]# tail -f /var/log/nginx/gitlab_error.log 
+    2019/06/29 19:13:07 [crit] 24457#0: *206 open() "/var/lib/nginx/tmp/client_body/0000000001" failed (13: Permission denied), client: 192.168.56.1, server: 192.168.56.14, request: "POST /profile HTTP/1.1", host: "192.168.56.14", referrer: "http://192.168.56.14/profile"
+    2019/06/29 19:13:51 [crit] 24457#0: *207 open() "/var/lib/nginx/tmp/client_body/0000000002" failed (13: Permission denied), client: 192.168.56.1, server: 192.168.56.14, request: "POST /profile HTTP/1.1", host: "192.168.56.14", referrer: "http://192.168.56.14/profile"
+    2019/06/29 19:15:37 [crit] 24457#0: *212 open() "/var/lib/nginx/tmp/client_body/0000000003" failed (13: Permission denied), client: 192.168.56.1, server: 192.168.56.14, request: "POST /profile HTTP/1.1", host: "192.168.56.14", referrer: "http://192.168.56.14/profile"
+
+发现权限不够，我们查看一下相关目录的权限::
+
+    [root@server ~]# ls -lah /var/lib/nginx/tmp/
+    total 0
+    drwx------. 7 root  root 78 May 10 16:10 .
+    drwx------. 3 root  root 17 May 10 16:10 ..
+    drwx------. 2 nginx root  6 Jun 22 23:04 client_body
+    drwx------. 2 nginx root  6 Jun 22 23:04 fastcgi
+    drwx------. 2 nginx root  6 Jun 22 23:04 proxy
+    drwx------. 2 nginx root  6 Jun 22 23:04 scgi
+    drwx------. 2 nginx root  6 Jun 22 23:04 uwsgi
+    
+    [root@server ~]# ls -lad /var/lib/nginx/tmp/
+    drwx------. 7 root root 78 May 10 16:10 /var/lib/nginx/tmp/
+    [root@server ~]# chmod 755 /var/lib/nginx/tmp/
+    [root@server ~]# ls -lad /var/lib/nginx/tmp/  
+    drwxr-xr-x. 7 root root 78 May 10 16:10 /var/lib/nginx/tmp/
+    
+    [root@server ~]# ls -lahd /var/lib/nginx/
+    drwx------. 3 root root 17 May 10 16:10 /var/lib/nginx/
+    [root@server ~]# chmod 755 /var/lib/nginx
+    [root@server ~]# ls -lahd /var/lib/nginx/
+    drwxr-xr-x. 3 root root 17 May 10 16:10 /var/lib/nginx/
+    [root@server ~]# ls -lad /var/lib/
+    drwxr-xr-x. 33 root root 4096 Jun 23 20:18 /var/lib/
+
+将 ``/var/lib/nginx/`` 和 ``/var/lib/nginx/tmp/`` 目录增加rx权限，再上传图像能够正常修改成功！可以看看很酷的头像：
+
+.. image:: ./_static/images/gitlab_admin_icon.png
+
+我们将"meizhaohui"这个账号设置为管理员，后期可以直接使用这个账号登陆操作GitLab。
+
+设置后，使用"meizhaohui"登陆，设置头像等属性！
+
+
+配置CI持续集成工具gitlab-runner
+-------------------------------------------------
+
+我们新建一个博客项目 ``bluelog`` ，并将博客项目的代码上传入库::
+
+    D:\data\github_tmp\higit
+    $ git clone git@192.168.56.14:higit/bluelog.git
+    Cloning into 'bluelog'...
+    warning: You appear to have cloned an empty repository.
+    D:\data\github_tmp\higit
+    $ git clone git@192.168.56.14:higit/bluelog.git
+    Cloning into 'bluelog'...
+    warning: You appear to have cloned an empty repository.
+    
+    D:\data\github_tmp\higit
+    $ ls
+    bluelog/
+    
+    D:\data\github_tmp\higit
+    $ ls
+    bluelog/
+    
+    D:\data\github_tmp\higit
+    $ cd bluelog\
+    
+    D:\data\github_tmp\higit\bluelog (master -> origin)
+    $ git diff
+    
+    D:\data\github_tmp\higit\bluelog (master -> origin)
+    $ git status
+    On branch master
+    
+    No commits yet
+    
+    Untracked files:
+      (use "git add <file>..." to include in what will be committed)
+    
+            .flaskenv
+            .gitignore
+            LICENSE
+            Pipfile
+            Pipfile.lock
+            README.md
+            README_origin.md
+            bluelog/
+            logs/
+    
+    nothing added to commit but untracked files present (use "git add" to track)
+    
+    D:\data\github_tmp\higit\bluelog (master -> origin)
+    $ git add -A
+    
+    D:\data\github_tmp\higit\bluelog (master -> origin)
+    $ git commit -m"upload bluelog code"
+    
+    D:\data\github_tmp\higit\bluelog (master -> origin)
+    $ git push origin master:master
+    Enumerating objects: 1115, done.
+    Counting objects: 100% (1115/1115), done.
+    Delta compression using up to 12 threads
+    Compressing objects: 100% (1040/1040), done.
+    Writing objects: 100% (1115/1115), 3.99 MiB | 5.91 MiB/s, done.
+    Total 1115 (delta 261), reused 0 (delta 0)
+    remote: Resolving deltas: 100% (261/261), done.
+    To 192.168.56.14:higit/bluelog.git
+     * [new branch]      master -> master
+     
+上传完成后，查看 ``bluelog`` 项目：
+
+.. image:: ./_static/images/gitlab_bluelog_project.png
+
+我们点击"配置CD/CD"按钮：
+
+.. image:: ./_static/images/gitlab_configure_ci_cd.png
+
+我们点击"选择一个GitLab CI Yaml模板"：
+
+.. image:: ./_static/images/gitlab_cicd_template.png
+
+选择 ``Bash`` 模板：
+
+.. image:: ./_static/images/gitlab_cicd_bash_template.png
+
+会自动加入Bash模板的内容，我们点击"提交修改"按钮进行提交，并检查CI/CD中的流水线工程：
+
+.. image:: ./_static/images/gitlab_cicd-pipeline.png
+
+发现流水线任务的状态是 ``"卡住(stuck)"`` ``"等待中"``，说明我们的流水线配置还不正确，没能正确的运行。
+
+.. image:: ./_static/images/gitlab_cicd_job_stuck.png
+
+提示 ``作业卡住了，请检查运行器`` ，我们查看具体哪个JOB卡住了：
+
+.. image:: ./_static/images/gitlab_cicd_build_stuck.png
+
+我们查看build这个作业的详情页面：
+
+.. image:: ./_static/images/gitlab_cicd_build_stuck_detail.png
+
+可以看到提示 ``由于您没有任何可以运行此作业的活跃运行器，因此作业卡住了。转到 Runner页面`` ，说明我们没有配置运行器，我们点击"Runner页面"跳转到运行器配置页面：
+
+.. image:: ./_static/images/gitlab_cicd_gitlab_runner_page.png
+
+终于到了GitLab Runner界面了，这个就是我们接下来要重点讲的 ``GitLab Runner`` ，也就是 ``运行器`` ！
+
+
