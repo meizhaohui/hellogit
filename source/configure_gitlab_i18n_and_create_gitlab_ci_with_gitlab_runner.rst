@@ -251,7 +251,7 @@ GitLab汉化
 设置后，使用"meizhaohui"登陆，设置头像等属性！
 
 
-配置CI持续集成工具gitlab-runner
+配置CI/CD
 -------------------------------------------------
 
 我们新建一个博客项目 ``bluelog`` ，并将博客项目的代码上传入库::
@@ -355,5 +355,292 @@ GitLab汉化
 .. image:: ./_static/images/gitlab_cicd_gitlab_runner_page.png
 
 终于到了GitLab Runner界面了，这个就是我们接下来要重点讲的 ``GitLab Runner`` ，也就是 ``运行器`` ！
+
+什么是GitLab Runner
+-------------------------------------------------
+
+- Runner是一个执行任务的进程。您可以根据需要配置任意数量的Runner。 
+- Runner可以放在不同的用户、服务器，甚至本地机器上。
+
+- 每个Runner可以处于以下状态中的其中一种：
+
+    - ``active`` Runner已启用，随时可以处理新作业
+    - ``paused`` Runner已暂停，暂时不会接受新的作业
+
+- 要开始使用作业，您可以向项目添加特定的运行器或使用共享的运行器。
+
+- 可以设置 ``专用Runner`` 、 ``共享Runner`` 、 ``群组Runner`` 。
+
+- 手动设置专用Runner的步骤：
+
+    - 安装 GitLab Runner
+    - 在Runner设置时指定URL
+    - 在Runner设置时使用注册令牌
+    - 启动Runner
+    
+- GiTLab Runner就是运行器，类似于Jenkins，可以为我们执行一些CI持续集成、构建的脚本任务，运行器具有执行脚本、调度、协调的工作能力。
+
+接下来我们为blog项目 ``bluelog`` 设置一个专用运行器 ``blog`` 。
+
+安装GitLab Runner运行器
+-------------------------------------------------
+
+`Install GitLab Runner <https://docs.gitlab.com/runner/install/>`_ 官方文档指出：
+
+    GitLab Runner can be installed and used on GNU/Linux, macOS, FreeBSD, and Windows. There are three ways to install it. Use Docker, download a binary manually, or use a repository for rpm/deb packages. Below you can find information on the different installation methods.
+
+即GitLab Runner可以通过二进制文件安装、Docker镜像安装、包仓库安装。
+
+我们使用通过第三种方式包仓库安装，即添加Yum源来进行安装。
+
+添加官方YUM源::
+
+    [root@server ~]# curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh | sudo bash
+      % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                     Dload  Upload   Total   Spent    Left  Speed
+    100  6753    0  6753    0     0   3420      0 --:--:--  0:00:01 --:--:--  3419
+    Detected operating system as centos/7.
+    Checking for curl...
+    Detected curl...
+    Downloading repository file: https://packages.gitlab.com/install/repositories/runner/gitlab-runner/config_file.repo?os=centos&dist=7&source=script
+    done.
+    Installing pygpgme to verify GPG signatures...
+    Loaded plugins: fastestmirror
+    Loading mirror speeds from cached hostfile
+     * base: mirrors.cn99.com
+     * centos-sclo-rh: ap.stykers.moe
+     * extras: ap.stykers.moe
+     * updates: ap.stykers.moe
+    base                                                                                                                          | 3.6 kB  00:00:00     
+    centos-sclo-rh                                                                                                                | 3.0 kB  00:00:00     
+    docker-ce-stable                                                                                                              | 3.5 kB  00:00:00     
+    epel                                                                                                                          | 5.3 kB  00:00:00 
+    
+    extras                                                                                                                        | 3.4 kB  00:00:00     
+    gitlab-ce                                                                                                                     | 2.9 kB  00:00:00     
+    ius                                                                                                                           | 1.3 kB  00:00:00     
+    mariadb                                                                                                                       | 2.9 kB  00:00:00     
+    runner_gitlab-runner-source/signature                                                                                         |  836 B  00:00:00     
+    Retrieving key from https://packages.gitlab.com/runner/gitlab-runner/gpgkey
+    Importing GPG key 0xE15E78F4:
+     Userid     : "GitLab B.V. (package repository signing key) <packages@gitlab.com>"
+     Fingerprint: 1a4c 919d b987 d435 9396 38b9 1421 9a96 e15e 78f4
+     From       : https://packages.gitlab.com/runner/gitlab-runner/gpgkey
+    Retrieving key from https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-366915F31B487241.pub.gpg
+    runner_gitlab-runner-source/signature                                                                                         |  951 B  00:00:00 !!! 
+    updates                                                                                                                       | 3.4 kB  00:00:00    
+    (1/6): epel/x86_64/updateinfo                                                                                                 | 977 kB  00:00:01    
+    (2/6): docker-ce-stable/x86_64/primary_db                                                                                     |  29 kB  00:00:02    
+    (3/6): ius/x86_64/primary                                                                                                     | 123 kB  00:00:03    
+    (4/6): gitlab-ce/7/primary_db                                                                                                 | 2.9 MB  00:00:06    
+    (5/6): updates/7/x86_64/primary_db                                                                                            | 6.4 MB  00:00:07    
+    (6/6): epel/x86_64/primary_db                               73% [====================================-             ] 1.0 MB/s |  13 MB  00:00:04 ETA
+    Installing yum-utils...
+    Loaded plugins: fastestmirror
+    Loading mirror speeds from cached hostfile
+     * base: mirrors.cn99.com
+     * centos-sclo-rh: ap.stykers.moe
+     * extras: ap.stykers.moe
+     * updates: ap.stykers.moe
+    Package yum-utils-1.1.31-50.el7.noarch already installed and latest version
+    Nothing to do
+    Generating yum cache for runner_gitlab-runner...
+    Importing GPG key 0xE15E78F4:
+     Userid     : "GitLab B.V. (package repository signing key) <packages@gitlab.com>"
+     Fingerprint: 1a4c 919d b987 d435 9396 38b9 1421 9a96 e15e 78f4
+     From       : https://packages.gitlab.com/runner/gitlab-runner/gpgkey
+    Generating yum cache for runner_gitlab-runner-source...
+    
+    The repository is setup! You can now install packages.
+
+查看Yum源中有哪些版本::
+
+    [root@server ~]# yum search --showduplicates gitlab-runner
+    Loaded plugins: fastestmirror
+    Loading mirror speeds from cached hostfile
+     * base: mirrors.cn99.com
+     * centos-sclo-rh: ap.stykers.moe
+     * extras: ap.stykers.moe
+     * updates: ap.stykers.moe
+    ============================================================ N/S matched: gitlab-runner =============================================================
+    gitlab-runner-10.0.0-1.x86_64 : GitLab Runner
+    gitlab-runner-10.0.1-1.x86_64 : GitLab Runner
+    gitlab-runner-10.0.2-1.x86_64 : GitLab Runner
+    gitlab-runner-10.1.0-1.x86_64 : GitLab Runner
+    gitlab-runner-10.1.1-1.x86_64 : GitLab Runner
+    gitlab-runner-10.2.0-1.x86_64 : GitLab Runner
+    gitlab-runner-10.2.1-1.x86_64 : GitLab Runner
+    gitlab-runner-10.3.0-1.x86_64 : GitLab Runner
+    gitlab-runner-10.3.1-1.x86_64 : GitLab Runner
+    gitlab-runner-10.4.0-1.x86_64 : GitLab Runner
+    gitlab-runner-10.5.0-1.x86_64 : GitLab Runner
+    gitlab-runner-10.6.0-1.x86_64 : GitLab Runner
+    gitlab-runner-10.6.1-1.x86_64 : GitLab Runner
+    gitlab-runner-10.7.0-1.x86_64 : GitLab Runner
+    gitlab-runner-10.7.1-1.x86_64 : GitLab Runner
+    gitlab-runner-10.7.2-1.x86_64 : GitLab Runner
+    gitlab-runner-10.7.4-1.x86_64 : GitLab Runner
+    gitlab-runner-10.8.0-1.x86_64 : GitLab Runner
+    gitlab-runner-10.8.2-1.x86_64 : GitLab Runner
+    gitlab-runner-11.0.0-1.x86_64 : GitLab Runner
+    gitlab-runner-11.0.2-1.x86_64 : GitLab Runner
+    gitlab-runner-11.1.0-1.x86_64 : GitLab Runner
+    gitlab-runner-11.1.1-1.x86_64 : GitLab Runner
+    gitlab-runner-11.2.0-1.x86_64 : GitLab Runner
+    gitlab-runner-11.2.1-1.x86_64 : GitLab Runner
+    gitlab-runner-11.2.2-1.x86_64 : GitLab Runner
+    gitlab-runner-11.3.0-1.x86_64 : GitLab Runner
+    gitlab-runner-11.3.1-1.x86_64 : GitLab Runner
+    gitlab-runner-11.3.2-1.x86_64 : GitLab Runner
+    gitlab-runner-11.4.0-1.x86_64 : GitLab Runner
+    gitlab-runner-11.4.1-1.x86_64 : GitLab Runner
+    gitlab-runner-11.4.2-1.x86_64 : GitLab Runner
+    gitlab-runner-11.5.0-1.x86_64 : GitLab Runner
+    gitlab-runner-11.5.1-1.x86_64 : GitLab Runner
+    gitlab-runner-11.6.0-1.x86_64 : GitLab Runner
+    gitlab-runner-11.6.1-1.x86_64 : GitLab Runner
+    gitlab-runner-11.7.0-1.x86_64 : GitLab Runner
+    gitlab-runner-11.8.0-1.x86_64 : GitLab Runner
+    gitlab-runner-11.9.0-1.x86_64 : GitLab Runner
+    gitlab-runner-11.9.1-1.x86_64 : GitLab Runner
+    gitlab-runner-11.9.2-1.x86_64 : GitLab Runner
+    gitlab-runner-11.10.0-1.x86_64 : GitLab Runner
+    gitlab-runner-11.10.1-1.x86_64 : GitLab Runner
+    gitlab-runner-11.11.0-1.x86_64 : GitLab Runner
+    gitlab-runner-11.11.1-1.x86_64 : GitLab Runner
+    gitlab-runner-11.11.2-1.x86_64 : GitLab Runner
+    gitlab-runner-11.11.3-1.x86_64 : GitLab Runner
+    gitlab-runner-12.0.0-1.x86_64 : GitLab Runner
+    gitlab-runner-12.0.1-1.x86_64 : GitLab Runner
+    
+      Name and summary matches only, use "search all" for everything.
+
+我们安装与GitLab大版本相同的GitLab Runner::
+
+    [root@server ~]# cat /opt/gitlab/embedded/service/gitlab-rails/VERSION
+    11.10.6
+    [root@server ~]# yum search --showduplicates gitlab-runner|grep 11.10
+    gitlab-runner-11.10.0-1.x86_64 : GitLab Runner
+    gitlab-runner-11.10.1-1.x86_64 : GitLab Runner
+    
+    [root@server ~]# yum install gitlab-runner-11.10.0 -y
+    Loaded plugins: fastestmirror
+    Loading mirror speeds from cached hostfile
+     * base: mirrors.cn99.com
+     * centos-sclo-rh: ap.stykers.moe
+     * extras: ap.stykers.moe
+     * updates: ap.stykers.moe
+    Resolving Dependencies
+    --> Running transaction check
+    ---> Package gitlab-runner.x86_64 0:11.10.0-1 will be installed
+    --> Finished Dependency Resolution
+    
+    Dependencies Resolved
+    
+    =====================================================================================================================================================
+     Package                             Arch                         Version                           Repository                                  Size
+    =====================================================================================================================================================
+    Installing:
+     gitlab-runner                       x86_64                       11.10.0-1                         runner_gitlab-runner                        31 M
+    
+    Transaction Summary
+    =====================================================================================================================================================
+    Install  1 Package
+    
+    Total download size: 31 M
+    Installed size: 52 M
+    Downloading packages:
+    gitlab-runner-11.10.0-1.x86_64.rpm                           0% [                                                  ]  64 kB/s | 169 kB  00:08:08 ETA 
+    gitlab-runner-11.10.0-1.x86_64.rpm                          14% [=======                                           ]  54 kB/s | 4.6 MB  00:08:14 ETA 
+    gitlab-runner-11.10.0-1.x86_64.rpm                          19% [=========-     gitlab-runner-11.10.0-1.x86_64.rpm                          19% [=========-     gitlab-runner-11.10.0-1.x8 28% [====-           ]  60 kB/s | 8.7 MB   06:13 ETA 
+    gitlab-runner-11.10.0-1.x8 36% [=====-          ]  36 kB/s |  11 MB   09:12 ETA 
+    gitlab-runner-11.10.0-1.x86_64.rpm                          45% [======================-                           ]  65 kB/s |  14 MB  00:04:18 ETA 
+    gitlab-runner-11.10.0-1.x86_64.rpm                          63% [===============================-                  ]  89 kB/s |  19 MB  00:02:09 ETA 
+    gitlab-runner-11.10.0-1.x86_64.rpm                          83% [=========================================-        ] 136 kB/s |  26 MB  00:00:36 ETA 
+    warning: /var/cache/yum/x86_64/7/runner_gitlab-runner/packages/gitlab-runner-11.10.0-1.x86_64.rpm: Header V4 RSA/SHA512 Signature, key ID 880721d4: NOKEY
+    Public key for gitlab-runner-11.10.0-1.x86_64.rpm is not installed
+    gitlab-runner-11.10.0-1.x86_64.rpm                                                                                            |  31 MB  00:06:50     
+    Retrieving key from https://packages.gitlab.com/runner/gitlab-runner/gpgkey
+    Importing GPG key 0xE15E78F4:
+     Userid     : "GitLab B.V. (package repository signing key) <packages@gitlab.com>"
+     Fingerprint: 1a4c 919d b987 d435 9396 38b9 1421 9a96 e15e 78f4
+     From       : https://packages.gitlab.com/runner/gitlab-runner/gpgkey
+    Retrieving key from https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-366915F31B487241.pub.gpg
+    Importing GPG key 0x880721D4:
+     Userid     : "GitLab, Inc. <support@gitlab.com>"
+     Fingerprint: 3018 3ac2 c4e2 3a40 9efb e705 9ce4 5abc 8807 21d4
+     From       : https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-366915F31B487241.pub.gpg
+    Running transaction check
+    Running transaction test
+    Transaction test succeeded
+    Running transaction
+      Installing : gitlab-runner-11.10.0-1.x86_64                                                                                                    1/1 
+    GitLab Runner: creating gitlab-runner...
+    Runtime platform                                    arch=amd64 os=linux pid=19979 revision=3001a600 version=11.10.0
+    gitlab-runner: Service is not running.
+    Runtime platform                                    arch=amd64 os=linux pid=19985 revision=3001a600 version=11.10.0
+    gitlab-ci-multi-runner: Service is not running.
+    Runtime platform                                    arch=amd64 os=linux pid=20004 revision=3001a600 version=11.10.0
+    Runtime platform                                    arch=amd64 os=linux pid=20039 revision=3001a600 version=11.10.0
+    Clearing docker cache...
+      Verifying  : gitlab-runner-11.10.0-1.x86_64                                                                                                    1/1 
+    
+    Installed:
+      gitlab-runner.x86_64 0:11.10.0-1                                                                                                                   
+    
+    Complete!
+
+查看gitlab-runner版本信息及帮助信息::
+
+    [root@server ~]# gitlab-runner --version
+    Version:      11.10.0
+    Git revision: 3001a600
+    Git branch:   11-10-stable
+    GO version:   go1.8.7
+    Built:        2019-04-19T09:48:55+0000
+    OS/Arch:      linux/amd64
+    [root@server ~]# gitlab-runner --help
+    NAME:
+       gitlab-runner - a GitLab Runner
+    
+    USAGE:
+       gitlab-runner [global options] command [command options] [arguments...]
+    
+    VERSION:
+       11.10.0 (3001a600)
+    
+    AUTHOR:
+       GitLab Inc. <support@gitlab.com>
+    
+    COMMANDS:
+         exec                  execute a build locally
+         list                  List all configured runners
+         run                   run multi runner service
+         register              register a new runner
+         install               install service
+         uninstall             uninstall service
+         start                 start service
+         stop                  stop service
+         restart               restart service
+         status                get status of a service
+         run-single            start single runner
+         unregister            unregister specific runner
+         verify                verify all registered runners
+         artifacts-downloader  download and extract build artifacts (internal)
+         artifacts-uploader    create and upload build artifacts (internal)
+         cache-archiver        create and upload cache artifacts (internal)
+         cache-extractor       download and extract cache artifacts (internal)
+         cache-init            changed permissions for cache paths (internal)
+         health-check          check health for a specific address
+         help, h               Shows a list of commands or help for one command
+    
+    GLOBAL OPTIONS:
+       --cpuprofile value           write cpu profile to file [$CPU_PROFILE]
+       --debug                      debug mode [$DEBUG]
+       --log-format value           Choose log format (options: runner, text, json) [$LOG_FORMAT]
+       --log-level value, -l value  Log level (options: debug, info, warn, error, fatal, panic) [$LOG_LEVEL]
+       --help, -h                   show help
+       --version, -v                print the version
+
 
 
