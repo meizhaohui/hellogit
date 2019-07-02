@@ -321,6 +321,54 @@ GitLab CI介绍
 
 .. image:: ./_static/images/code_check_failed_no_jobs_of_further_stage_are_executed.png
 
+.. Attention:: 
+
+    默认情况下，GitLab Runner运行器每次只执行一个作业，只有当满足以下条件之一时，才会真正的并行执行:
+    
+        - 作业运行在不同的运行器上；
+        - 你修改了运行器的 ``concurrent`` 设置，默认情况下 ``concurrent = 1`` 。 
+
+``only`` 和 ``except``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``only`` 和 ``except`` 用于在创建作业时对作业的限制策略。
+
+- ``only`` 定义了哪些分支或标签(branches and tags)的作业会运行
+- ``except``  定义了哪些分支或标签(branches and tags)的作业不会运行
+
+下面是策略规则：
+
+- ``only`` 和 ``except`` 可同时使用，如果在一个作业中同时定义了 ``only`` 和 ``except`` ，则以 ``only`` 为准，跳过 ``except`` 。
+- ``only`` 和 ``except`` 可以使用正则表达式。
+- ``only`` 和 ``except`` 允许指定用于过滤forks作业的存储库路径。
+- ``only`` 和 ``except`` 中可以使用特殊的关键字，如 ``branches`` 、 ``tags`` 、 ``api`` 、 ``external`` 、 ``pipelines`` 、 ``pushes`` 、 ``schedules`` 、 ``triggers`` 、 ``web`` 、 ``merge_requests`` 、 ``chats`` 等。
+
+在下面这个例子中，job将只会运行以 ``issue-`` 开始的refs(分支)，然而except中设置将被跳过::
+
+    job:
+      # use regexp
+      only:
+        - /^issue-.*$/
+      # use special keyword
+      except:
+        - branches
+
+匹配模式默认是大小写敏感的(case-sensitive)，使用 ``i`` 标志，如 ``/pattern/i`` 可以使匹配模式大小写不敏感::
+
+    job:
+      # use regexp
+      only:
+        - /^issue-.*$/i
+      # use special keyword
+      except:
+        - branches
+
+
+
+
+
+
+
 参考：
 
 - `Getting started with GitLab CI/CD <https://docs.gitlab.com/ce/ci/quick_start/README.html>`_
