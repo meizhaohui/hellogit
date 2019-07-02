@@ -139,10 +139,187 @@ GitLab CI介绍
     build1:
       script:
         - echo "Do your build here"
+        - uname -a
 
 表示build1作业需要执行的命令是输出"Do your build here"。
 
-.. WARNING:: Sometimes, script commands will need to be wrapped in single or double quotes. For example, commands that contain a colon (:) need to be wrapped in quotes so that the YAML parser knows to interpret the whole thing as a string rather than a “key: value” pair. Be careful when using special characters: :, {, }, \[, \], ,, &, \*, #, ?, \|, -, <, >, =, !, %, @, \`. 即使用冒号时应使用引号包裹起来，使用特殊字符时需要特别注意！！！
+.. WARNING:: Sometimes, script commands will need to be wrapped in single or double quotes. For example, commands that contain a colon (:) need to be wrapped in quotes so that the YAML parser knows to interpret the whole thing as a string rather than a “key: value” pair. Be careful when using special characters: :, {, }, \[, \], ,, &, \*, #, ?, \|, -, <, >, =, !, %, @, \`. 即使用冒号时应使用引号包裹起来，使用特殊字符时需要特别注意！！！注意如果要输出冒号字符，冒号后面不能紧接空格！！！
+
+``image``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``image`` 指定使用Docker镜像。如 ``iamge:name`` ，暂时忽略。
+
+``services``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``services`` 指定使用Docker镜像服务。如 ``services:name`` ，暂时忽略。
+
+``before_script``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``before_script`` 用于定义在所有作业之前需要执行的命令，比如更新代码、安装依赖、打印调试信息之类的事情。
+
+示例::
+
+    before_script:
+      - echo "Before script section"
+      - echo "For example you might run an update here or install a build dependency"
+      - echo "Or perhaps you might print out some debugging details"
+
+
+``after_script``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``after_script`` 用于定义在所有作业(即使失败)之后需要执行的命令，比如清空工作空间。
+
+示例::
+
+    after_script:
+      - echo "After script section"
+      - echo "For example you might do some cleanup here"
+
+.. Important::
+
+    - before_script和script在一个上下文中是串行执行的，after_script是独立执行的，即after_script与before_script/script的上下文环境不同。
+    - after_script会将当前工作目录设置为默认值。
+    - 由于after_script是分离的上下文，在after_script中无法看到在before_script和script中所做的修改:
+    
+        - 在before_script和script中的命名别名、导出变量，对after_script不可见；
+        - before_script和script在工作树之外安装的软件，对after_script不可见。
+    
+    - 你可以在作业中定义before_script，after_script，也可以将其定义为顶级元素，定义为顶级元素将为每一个任务都执行相应阶段的脚本或命令。作业级会覆盖全局级的定义。
+
+示例::
+
+    before_script:
+      - echo "Before script section"
+      - echo "For example you might run an update here or install a build dependency"
+      - echo "Or perhaps you might print out some debugging details"
+    
+    after_script:
+      - echo "After script section"
+      - echo "For example you might do some cleanup here"
+    
+    build1:
+      stage: build
+      before_script:
+        - echo "Before script in build stage that overwrited the globally defined before_script"
+        - echo "Install cloc:A tool to count lines of code in various languages from a given directory."
+        - yum install cloc -y
+      after_script:
+        - echo "After script in build stage that overwrited the globally defined after_script"
+        - cloc --version
+        - cloc .
+      script:
+        - echo "Do your build here"
+        - cloc --version
+        - cloc .
+      tags:
+        - bluelog
+
+将修改上传提交，查看作业build1的控制台输出：
+
+.. image:: ./_static/images/job_before_script_overwrited_global_before_script.png
+.. image:: ./_static/images/job_after_script_overwrited_global_after_script.png
+
+可以发现build1作业的 ``before_script`` 和 ``after_script`` 将全局的 ``before_script`` 和 ``after_script`` 覆盖了。
+
+
+``stages``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``stages`` 定义流水线全局可使用的阶段，阶段允许有灵活的多级管道，阶段元素的排序定义了作业执行的顺序。
+
+- 相同 ``stage`` 阶段的作业并行运行。
+- 默认情况下，上一阶段的作业全部运行成功后才执行下一阶段的作业。
+- 默认有三个阶段， ``build`` 、``test`` 、``deploy`` 三个阶段，即 ``构建`` 、``测试`` 、``部署`` 。
+- 如果一个作业未定义  ``stage`` 阶段，则作业使用 ``test`` 测试阶段。
+- 默认情况下，任何一个前置的作业失败了，commit提交会标记为failed并且下一个stages的作业都不会执行。
+
+``stage``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``stage`` 定义流水线中每个作业所处的阶段，处于相同阶段的作业并行执行。
+
+示例::
+
+    # This file is a template, and might need editing before it works on your project.
+    # see https://docs.gitlab.com/ce/ci/yaml/README.html for all available options
+    
+    
+    before_script:
+      - echo "Before script section"
+      - echo "For example you might run an update here or install a build dependency"
+      - echo "Or perhaps you might print out some debugging details"
+    
+    after_script:
+      - echo "After script section"
+      - echo "For example you might do some cleanup here"
+    
+    stages:
+      - build
+      - code_check
+      - test
+      - deploy
+      
+    build1:
+      stage: build
+      before_script:
+        - echo "Before script in build stage that overwrited the globally defined before_script"
+        - echo "Install cloc:A tool to count lines of code in various languages from a given directory."
+        - yum install cloc -y
+      after_script:
+        - echo "After script in build stage that overwrited the globally defined after_script"
+        - cloc --version
+        - cloc .
+      script:
+        - echo "Do your build here"
+        - cloc --version
+        - cloc .
+      tags:
+        - bluelog
+    
+    find Bugs:
+      stage: code_check
+      script:
+        - echo "Use Flake8 to check python code"
+        - pip install flake8
+        - flake8 --version
+        - flake8 .
+      tags:
+        - bluelog
+        
+    test1:
+      stage: test
+      script:
+        - echo "Do a test here"
+        - echo "For example run a test suite"
+      tags:
+        - bluelog
+    
+    test2:
+      stage: test
+      script:
+        - echo "Do another parallel test here"
+        - echo "For example run a lint test"
+      tags:
+        - bluelog
+        
+
+我们增加一个 ``code_check`` 阶段，该阶段有一个作业 ``find Bugs`` ，该作业主要是先安装Flake8，然后使用Flake8对Python代码进行规范检查。
+
+.. image:: ./_static/images/job_code_check_failed.png
+
+由于Flake8检查到了Python代码中的缺陷，导致find Bugs作业失败！这样可以控制开发人员提交有坏味道的代码到仓库中。
+
+另外，在上一个流水线中，Test阶段的作业test1和test2是并行执行的，如下图所示：
+
+.. image:: ./_static/images/test_jobs_are_executed_in_parallel.png
+
+本次(pipeline #7)流水线由于在作业 ``find Bugs`` 检查不通过，导致整个流水线运行失败，后续的作业不会执行：
+
+.. image:: ./_static/images/code_check_failed_no_jobs_of_further_stage_are_executed.png
 
 参考：
 
