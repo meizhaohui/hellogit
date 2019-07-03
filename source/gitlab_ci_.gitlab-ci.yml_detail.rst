@@ -363,11 +363,194 @@ GitLab CI介绍
       except:
         - branches
 
+下面这个示例，仅当指定标记的tags的refs引用，或者通过API触发器的构建、或者流水线计划调度的构建才会运行::
+
+    job:
+      # use special keywords
+      only:
+        - tags
+        - triggers
+        - schedules
+
+仓库的路径(repository path)只能用于父级仓库执行作业，不能用于forks::
+
+    job:
+      only:
+        - branches@gitlab-org/gitlab-ce
+      except:
+        - master@gitlab-org/gitlab-ce
+        - /^release/.*$/@gitlab-org/gitlab-ce
+
+上面这个例子，将会在所有分支执行，但 **不会在** master主干以及以release/开头的分支上执行。
+
+- 当一个作业没有定义 ``only`` 规则时，其默认为 ``only: ['branches', 'tags']`` 。
+- 如果一个作业没有定义 ``except`` 规则时，则默认 ``except`` 规则为空。
+
+下面这个两个例子是等价的::
+
+    job:
+      script: echo 'test'
+
+转换后::
+
+    job:
+      script: echo 'test'
+      only: ['branches', 'tags']
+
+.. Attention::
+
+    关于正则表达式使用的说明：
+    
+    - 因为 ``@`` 用于表示ref的存储库路径的开头，所以在正则表达式中匹配包含 ``@`` 字符的ref名称需要使用十六进制字符代码 ``\x40`` 。
+    - 仅标签和分支名称才能使用正则表达式匹配，仓库路径按字面意义匹配。
+    - 如果使用正则表达式匹配标签或分支名称，则匹配模式的整个引用部分都是正则表达式。
+    - 正则表达式必须以 ``/`` 开头和结尾，即 ``/regular expressions/`` ，因此， ``issue-/.*/`` 不会匹配以 ``issue-`` 开头的标签或分支。
+    - 可以在正则表达式中使用锚点 ``^$`` ，用来匹配开头或结尾，如 ``/^issue-.*$/`` 与 ``/^issue-/`` 等价， 但  ``/issue/`` 却可以匹配名称为 ``severe-issues`` 的分支，所以正则表达式的使用要谨慎！
+
+``only`` 和 ``except`` 高级用法
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- ``only`` 和 ``except`` 支持高级策略，``refs`` 、 ``variables`` 、 ``changes`` 、 ``kubernetes`` 四个关键字可以使用。
+- 如果同时使用多个关键字，中间的逻辑是 ``逻辑与AND`` 。
+
+
+``only:refs/except:refs``
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- ``refs`` 策略可以使用 ``only`` 和 ``except`` 基本用法中的关键字。
+
+下面这个例子中，deploy作业仅当流水线是计划作业或者在master主干运行::
+
+    deploy:
+      only:
+        refs:
+          - master
+          - schedules
 
 
 
+``only:kubernetes/except:kubernetes``
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- ``kubernetes`` 策略仅支持 ``active`` 关键字。
+
+下面这个例子中，deploy作业仅当kubernetes服务启动后才会运行::
+
+    deploy:
+      only:
+        kubernetes: active
+
+``only:variables/except:variables``
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- ``variables`` 关键字用来定义变量表达式，你可以使用预定义变量、项目、组、环境变量来评估一个作业是否需要创建或运行。
+
+下面这个例子使用了变量表达式::
+
+    deploy:
+      script: cap staging deploy
+      only:
+        refs:
+          - branches
+        variables:
+          - $RELEASE == "staging"
+          - $STAGING
+
+下面这个例子，会根据提交日志信息来排除某些作业::
+
+    end-to-end:
+      script: rake test:end-to-end
+      except:
+        variables:
+          - $CI_COMMIT_MESSAGE =~ /skip-end-to-end-tests/
+
+``only:changes/except:changes``
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- ``changes`` 策略表明一个作业只有在使用 ``git push`` 事件使文件发生变化时执行。
+
+下面这个例子中，deploy作业仅当流水线是计划作业或者在master主干运行::
+
+    docker build:
+      script: docker build -t my-image:$CI_COMMIT_REF_SLUG .
+      only:
+        changes:
+          - Dockerfile
+          - docker/scripts/*
+          - dockerfiles/**/*
+          - more_scripts/*.{rb,py,sh}
+
+上面这个例子中，一旦 ``Dockerfile`` 文件发生变化，或者 ``docker/scripts/`` 目录下的文件发生变化，或者 ``dockerfiles/`` 目录下的文件或目录发生变化，或者 ``more_scripts/`` 目录下 ``rb,py,sh`` 等脚本文件发生变化时，就会触发Docker构建。
+
+- 也可以使用 ``glob模式匹配`` 来匹配根目录下的文件，或者任何目录下的文件。
+
+如下示例::
+
+    test:
+      script: npm run test
+      only:
+        changes:
+          - "*.json"
+          - "**/*.sql"
+
+.. Attention::
+
+    在上面的示例中，``glob模式匹配`` 的字符串需要使用双引号包裹起来，否则会导致 ``.gitlab-ci.yml`` 解析错误。
+
+下面这个例子，当md文件发生变化时，会忽略CI作业::
+
+    build:
+      script: npm run build
+      except:
+        changes:
+          - "*.md"
 
 
+.. Warning::
+
+    记录一下官网说明中使用 ``change`` 时需要注意的两点：
+    
+    - Using changes with new branches and tags：When pushing a new branch or a new tag to GitLab, the policy always evaluates to true and GitLab will create a job. This feature is not connected with merge requests yet and, because GitLab is creating pipelines before a user can create a merge request, it is unknown what the target branch is at this point.
+    - Using changes with merge_requests：With pipelines for merge requests, it is possible to define a job to be created based on files modified in a merge request.
+
+在合并请求中使用 ``change`` 策略::
+
+    docker build service one:
+      script: docker build -t my-service-one-image:$CI_COMMIT_REF_SLUG .
+      only:
+        refs:
+          - merge_requests
+        changes:
+          - Dockerfile
+          - service-one/**/*
+
+上面这个例子中，一旦合并请求中修改了 ``Dockerfile`` 文件或者修改了 ``service`` 目录下的文件，都会触发Docker构建。
+
+我们将 ``bluelog`` 项目的描述和主题进行修改：
+
+.. image:: ./_static/images/project_description_tags.png
+
+并创建三个分支 ``issue-pylint`` 、``Issue-flake8`` 和 ``severe-issues`` ：
+
+.. image:: ./_static/images/project_three_branches.png
+
+刚新增的三个分支，自动继承了master主干的CI RUNNER，因为Flake8检查代码质量没通过，流水线都失败了：
+
+.. image:: ./_static/images/project_three_branches_pipeline_failed.png
+
+现在朝 ``.gitlab-ci.yml`` 文件中增加 ``only`` 和 ``except`` 策略。
+
+创建仅匹配 ``issue-`` 开头的分支：
+
+.. image:: ./_static/images/only_match_startwith_issue.png
+
+可以发现master主干没有执行 ``find Bugs`` 作业：
+
+.. image:: ./_static/images/master_no_find_bugs.png
+
+将修改拉取到分支``issue-pylint`` ：
+
+.. image:: ./_static/images/startwith_issue_cherrypick_to_issue_pylint.png
 
 参考：
 
