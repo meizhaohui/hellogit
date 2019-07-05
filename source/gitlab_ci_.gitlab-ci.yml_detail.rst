@@ -338,7 +338,7 @@ GitLab CI介绍
 
 下面是策略规则：
 
-- ``only`` 和 ``except`` 可同时使用，如果在一个作业中同时定义了 ``only`` 和 ``except`` ，则以 ``only`` 为准，跳过 ``except`` 。
+- ``only`` 和 ``except`` 可同时使用，如果在一个作业中同时定义了 ``only`` 和 ``except`` ，则同时 ``only``  ``except`` 进行过滤(注意，不是忽略  ``except`` 条件) 。
 - ``only`` 和 ``except`` 可以使用正则表达式。
 - ``only`` 和 ``except`` 允许指定用于过滤forks作业的存储库路径。
 - ``only`` 和 ``except`` 中可以使用特殊的关键字，如 ``branches`` 、 ``tags`` 、 ``api`` 、 ``external`` 、 ``pipelines`` 、 ``pushes`` 、 ``schedules`` 、 ``triggers`` 、 ``web`` 、 ``merge_requests`` 、 ``chats`` 等。
@@ -538,7 +538,11 @@ GitLab CI介绍
 
 .. image:: ./_static/images/project_three_branches_pipeline_failed.png
 
+**为了便于测试，将"meizhaohui"账号设置为** ``bluelog`` **项目的主程序员！**
+
 现在朝 ``.gitlab-ci.yml`` 文件中增加 ``only`` 和 ``except`` 策略。
+
+
 
 创建仅匹配 ``issue-`` 开头的分支：
 
@@ -548,9 +552,282 @@ GitLab CI介绍
 
 .. image:: ./_static/images/master_no_find_bugs.png
 
-将修改拉取到分支``issue-pylint`` ：
+为了快速测试，我们对对个作业都使用  ``only`` 和 ``except`` 策略:
 
-.. image:: ./_static/images/startwith_issue_cherrypick_to_issue_pylint.png
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 31,44,58,70,82
+    
+    # This file is a template, and might need editing before it works on your project.
+    # see https://docs.gitlab.com/ce/ci/yaml/README.html for all available options
+    
+    
+    before_script:
+      - echo "Before script section"
+      - echo "For example you might run an update here or install a build dependency"
+      - echo "Or perhaps you might print out some debugging details"
+    
+    after_script:
+      - echo "After script section"
+      - echo "For example you might do some cleanup here"
+    
+    stages:
+      - build
+      - code_check
+      - test
+      - deploy
+      
+    build1:
+      stage: build
+      before_script:
+        - echo "Before script in build stage that overwrited the globally defined before_script"
+        - echo "Install cloc:A tool to count lines of code in various languages from a given directory."
+        - yum install cloc -y
+      after_script:
+        - echo "After script in build stage that overwrited the globally defined after_script"
+        - cloc --version
+        # cloc .
+      only:
+        - /^issue-.*$/
+      except:
+        - master
+      script:
+        - echo "Do your build here"
+        - cloc --version
+        # - cloc .
+      tags:
+        - bluelog
+    
+    find Bugs:
+      stage: code_check
+      only:
+        - /^issue-.*$/
+      except:
+        - branches
+      script:
+        - echo "Use Flake8 to check python code"
+        - pip install flake8
+        - flake8 --version
+        # - flake8 .
+      tags:
+        - bluelog
+        
+    test1:
+      stage: test
+      only:
+        - /^issue-.*$/
+      except:
+        - /issue-pylint/
+      script:
+        - echo "Do a test here"
+        - echo "For example run a test suite"
+      tags:
+        - bluelog
+    
+    test2:
+      stage: test
+      only:
+        - /^issue-.*$/
+      except:
+        - /Issue-flake8/
+      script:
+        - echo "Do another parallel test here"
+        - echo "For example run a lint test"
+      tags:
+        - bluelog
+        
+    deploy1:
+      stage: deploy
+      only:
+        - /^issue-.*$/
+      except:
+        - /severe-issues/
+      script:
+        - echo "Do your deploy here"
+      tags:
+        - bluelog
+
+提交后，直接入库，检查master主干，并没有触发流水线作业。
+
+统计作业流水线作业情况：
+
++---------------+----------+--------+-----------+---------+---------+-----------+
+|     分支      |  流水线  | build1 | find Bugs |  test1  |  test2  |  deploy1  |
++---------------+----------+--------+-----------+---------+---------+-----------+
+|     master    |  未触发  |        |           |         |         |           |
++---------------+----------+--------+-----------+---------+---------+-----------+
+| issue-pylint  |    #22   |  Yes   |    No     |    No   |   Yes   |    Yes    |
++---------------+----------+--------+-----------+---------+---------+-----------+
+| Issue-flake8  |  未触发  |        |           |         |         |           |
++---------------+----------+--------+-----------+---------+---------+-----------+
+| severe-issues |  未触发  |        |           |         |         |           |
++---------------+----------+--------+-----------+---------+---------+-----------+
+
+.. image:: ./_static/images/gitlab_only_except_pipeline_22.png
+
+解释上面的流水作业策略：
+
++---------------+----------------------------------------------------+------------------------------------------------------------------------------+
+|    作业       |                     规则定义                       |                                  规则解释                                    |
++---------------+----------------------------------------------------+------------------------------------------------------------------------------+
+|     build1    |    ``only: - /^issue-.*$/ except: - master``       |  只在以issue-开头的分支执行，不在master主干执行                              |
++---------------+----------------------------------------------------+------------------------------------------------------------------------------+
+|   find Bugs   |  ``only: - /^issue-.*$/ except: - branches``       |  只在以issue-开头的分支执行，不在 ``branches`` 分支执行，                    |
+|               |                                                    |  由于issue-pylint也是分支，所以在issue-pylint中也不会执行find Bugs作业       |
++---------------+----------------------------------------------------+------------------------------------------------------------------------------+
+|     test1     | ``only: - /^issue-.*$/ except: - /issue-pylint/``  |  只在以issue-开头的分支执行，不在issue-pylint分支执行，                      |
+|               |                                                    |  即会在除了issue-pylint分支以外的issue-开头的分支执行，也即没有分支执行      |
++---------------+----------------------------------------------------+------------------------------------------------------------------------------+
+|     test2     | ``only: - /^issue-.*$/ except: - /Issue-flake8/``  |  只在以issue-开头的分支执行，不在Issue-flake8分支执行，                      |
+|               |                                                    |  因此可以issue-pylint分支执行                                                |
++---------------+----------------------------------------------------+------------------------------------------------------------------------------+
+|    deploy1    | ``only: - /^issue-.*$/ except: - /severe-issues/`` |  只在以issue-开头的分支执行，不在severe-issues分支执行                       |
+|               |                                                    |  因此可以issue-pylint分支执行                                                |
++---------------+----------------------------------------------------+------------------------------------------------------------------------------+
+
+好，我们再将 ``only`` 语法中加入语法大小写不敏感的 ``i`` 标志！再来做一次实现，看看最终的效果。
+
+加入语法大小写不敏感的 ``i`` 标志:
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 31,44,58,70,82
+   
+    # This file is a template, and might need editing before it works on your project.
+    # see https://docs.gitlab.com/ce/ci/yaml/README.html for all available options
+    
+    
+    before_script:
+      - echo "Before script section"
+      - echo "For example you might run an update here or install a build dependency"
+      - echo "Or perhaps you might print out some debugging details"
+    
+    after_script:
+      - echo "After script section"
+      - echo "For example you might do some cleanup here"
+    
+    stages:
+      - build
+      - code_check
+      - test
+      - deploy
+      
+    build1:
+      stage: build
+      before_script:
+        - echo "Before script in build stage that overwrited the globally defined before_script"
+        - echo "Install cloc:A tool to count lines of code in various languages from a given directory."
+        - yum install cloc -y
+      after_script:
+        - echo "After script in build stage that overwrited the globally defined after_script"
+        - cloc --version
+        # cloc .
+      only:
+        - /^issue-.*$/i
+      except:
+        - master
+      script:
+        - echo "Do your build here"
+        - cloc --version
+        # - cloc .
+      tags:
+        - bluelog
+    
+    find Bugs:
+      stage: code_check
+      only:
+        - /^issue-.*$/i
+      except:
+        - branches
+      script:
+        - echo "Use Flake8 to check python code"
+        - pip install flake8
+        - flake8 --version
+        # - flake8 .
+      tags:
+        - bluelog
+        
+    test1:
+      stage: test
+      only:
+        - /^issue-.*$/i
+      except:
+        - /issue-pylint/
+      script:
+        - echo "Do a test here"
+        - echo "For example run a test suite"
+      tags:
+        - bluelog
+    
+    test2:
+      stage: test
+      only:
+        - /^issue-.*$/i
+      except:
+        - /Issue-flake8/
+      script:
+        - echo "Do another parallel test here"
+        - echo "For example run a lint test"
+      tags:
+        - bluelog
+        
+    deploy1:
+      stage: deploy
+      only:
+        - /^issue-.*$/i
+      except:
+        - /severe-issues/
+      script:
+        - echo "Do your deploy here"
+      tags:
+        - bluelog
+    
+
+预期效果： ``issue-pylint`` 和 ``Issue-flake8`` 分支会触发流水线执行，``master`` 主干和 ``severe-issues`` 分支不会触发流水线执行。
+
+统计作业流水线作业情况：
+
++---------------+----------+--------+-----------+---------+---------+-----------+
+|     分支      |  流水线  | build1 | find Bugs |  test1  |  test2  |  deploy1  |
++---------------+----------+--------+-----------+---------+---------+-----------+
+|     master    |  未触发  |        |           |         |         |           |
++---------------+----------+--------+-----------+---------+---------+-----------+
+| issue-pylint  |    #23   |  Yes   |    No     |    No   |   Yes   |    Yes    |
++---------------+----------+--------+-----------+---------+---------+-----------+
+| Issue-flake8  |    #24   |  Yes   |    No     |   Yes   |    No   |    Yes    |
++---------------+----------+--------+-----------+---------+---------+-----------+
+| severe-issues |  未触发  |        |           |         |         |           |
++---------------+----------+--------+-----------+---------+---------+-----------+
+
+正如我们预期的一样，``issue-pylint`` 和 ``Issue-flake8`` 分支会触发流水线执行，``master`` 主干和 ``severe-issues`` 分支不会触发流水线执行：
+
+.. image:: ./_static/images/gitlab_only_except_pipeline_23.png
+.. image:: ./_static/images/gitlab_only_except_pipeline_24.png
+
+解释上面的流水作业策略：
+
++---------------+-----------------------------------------------------+------------------------------------------------------------------------------+
+|    作业       |                     规则定义                        |                                  规则解释                                    |
++---------------+-----------------------------------------------------+------------------------------------------------------------------------------+
+|     build1    |    ``only: - /^issue-.*$/i except: - master``       |  只在以issue(不区分大小写)-开头的分支执行，不在master主干执行                |
+|               |                                                     |  可以在issue-pylint和Issue-flake8分支执行                                    |
++---------------+-----------------------------------------------------+------------------------------------------------------------------------------+
+|   find Bugs   |  ``only: - /^issue-.*$/i except: - branches``       |  只在以issue(不区分大小写)-开头的分支执行，不在 ``branches`` 分支执行，      |
+|               |                                                     |  由于issue-pylint也是分支，所以在issue-pylint中也不会执行find Bugs作业       |
++---------------+-----------------------------------------------------+------------------------------------------------------------------------------+
+|     test1     | ``only: - /^issue-.*$/i except: - /issue-pylint/``  |  只在以issue(不区分大小写)-开头的分支执行，不在issue-pylint分支执行，        |
+|               |                                                     |  即会在除了issue-pylint分支以外的issue-(不区分大小写)开头的分支执行，        |
+|               |                                                     |  可以在Issue-flake8分支执行                                                  |
++---------------+-----------------------------------------------------+------------------------------------------------------------------------------+
+|     test2     | ``only: - /^issue-.*$/i except: - /Issue-flake8/``  |  只在以issue(不区分大小写)-开头的分支执行，不在Issue-flake8分支执行，        |
+|               |                                                     |  因此可以issue-pylint分支执行                                                |
++---------------+-----------------------------------------------------+------------------------------------------------------------------------------+
+|    deploy1    | ``only: - /^issue-.*$/i except: - /severe-issues/`` |  只在以issue(不区分大小写)-开头的分支执行，不在severe-issues分支执行         |
+|               |                                                     |  可以在issue-pylint和Issue-flake8分支执行                                    |
++---------------+-----------------------------------------------------+------------------------------------------------------------------------------+
+
+
+
 
 参考：
 
