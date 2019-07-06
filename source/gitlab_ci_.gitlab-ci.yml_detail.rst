@@ -1256,7 +1256,176 @@ git tag打标签的使用
 
 .. image:: ./_static/images/gitlab_bluelog_pipeline_31_with_tag_v0.1.png
 
+使用流水线触发器触发流水线执行
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+我们给  ``bluelog`` 项目创建一个流水线触发器( ``Trigger`` )，在项目的 ``设置`` --> ``CI/CD`` --> ``流水线触发器`` 处增加流水线触发器：
+
+.. image:: ./_static/images/gitlab_bluelog_add_pipeline_trigger_page.png
+
+在"触发器描述"处填写"bluelog trigger"，然后点击"增加触发器"按钮，则会新增一个触发器:
+
+.. image:: ./_static/images/gitlab_bluelog_trigger.png
+
+我们修改 ``.gitlab-ci.yml`` 配置文件，将 ``build1`` 和 ``find Bugs`` 作业设置为仅 ``triggers`` 触发器能够触发执行:
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 31,42
+   
+    # This file is a template, and might need editing before it works on your project.
+    # see https://docs.gitlab.com/ce/ci/yaml/README.html for all available options
+    
+    
+    before_script:
+      - echo "Before script section"
+      - echo "For example you might run an update here or install a build dependency"
+      - echo "Or perhaps you might print out some debugging details"
+    
+    after_script:
+      - echo "After script section"
+      - echo "For example you might do some cleanup here"
+    
+    stages:
+      - build
+      - code_check
+      - test
+      - deploy
+      
+    build1:
+      stage: build
+      before_script:
+        - echo "Before script in build stage that overwrited the globally defined before_script"
+        - echo "Install cloc:A tool to count lines of code in various languages from a given directory."
+        - yum install cloc -y
+      after_script:
+        - echo "After script in build stage that overwrited the globally defined after_script"
+        - cloc --version
+        # cloc .
+      only:
+        - triggers
+      script:
+        - echo "Do your build here"
+        - cloc --version
+        # - cloc .
+      tags:
+        - bluelog
+    
+    find Bugs:
+      stage: code_check
+      only:
+        - triggers
+      script:
+        - echo "Use Flake8 to check python code"
+        - pip install flake8
+        - flake8 --version
+        # - flake8 .
+      tags:
+        - bluelog
+        
+    test1:
+      stage: test
+      only:
+        - tags
+      except:
+        - /issue-pylint/
+      script:
+        - echo "Do a test here"
+        - echo "For example run a test suite"
+      tags:
+        - bluelog
+    
+    test2:
+      stage: test
+      only:
+        - tags
+      except:
+        - /Issue-flake8/
+      script:
+        - echo "Do another parallel test here"
+        - echo "For example run a lint test"
+      tags:
+        - bluelog
+        
+    deploy1:
+      stage: deploy
+      only:
+        - tags
+      except:
+        - /severe-issues/
+      script:
+        - echo "Do your deploy here"
+      tags:
+        - bluelog
+    
+提交修改::
+
+    D:\data\github_tmp\higit\bluelog (master -> origin)                      
+    $ git diff                                                               
+    diff --git a/.gitlab-ci.yml b/.gitlab-ci.yml                             
+    index 657dc5e..921f93e 100644                                            
+    --- a/.gitlab-ci.yml                                                     
+    +++ b/.gitlab-ci.yml                                                     
+    @@ -28,9 +28,7 @@ build1:                                                
+         - cloc --version                                                    
+         # cloc .                                                            
+       only:                                                                 
+    -    - tags                                                              
+    -  except:                                                               
+    -    - master                                                            
+    +    - triggers                                                          
+       script:                                                               
+         - echo "Do your build here"                                         
+         - cloc --version                                                    
+    @@ -41,9 +39,7 @@ build1:                                                
+     find Bugs:                                                              
+       stage: code_check                                                     
+       only:                                                                 
+    -    - tags                                                              
+    -  except:                                                               
+    -    - branches                                                          
+    +    - triggers                                                          
+       script:                                                               
+         - echo "Use Flake8 to check python code"                            
+         - pip install flake8                                                
+                                                                             
+    D:\data\github_tmp\higit\bluelog (master -> origin)                      
+    $ git add -A                                                             
+                                                                             
+    D:\data\github_tmp\higit\bluelog (master -> origin)                      
+    $ git commit -m"使用触发器trigger触发流水线执行"                         
+    [master 57f64a3] 使用触发器trigger触发流水线执行                         
+     1 file changed, 2 insertions(+), 6 deletions(-)                         
+                                                                             
+    D:\data\github_tmp\higit\bluelog (master -> origin)                      
+    $ git push origin master:master                                          
+    Enumerating objects: 5, done.                                            
+    Counting objects: 100% (5/5), done.                                      
+    Delta compression using up to 12 threads                                 
+    Compressing objects: 100% (3/3), done.                                   
+    Writing objects: 100% (3/3), 361 bytes | 361.00 KiB/s, done.             
+    Total 3 (delta 2), reused 0 (delta 0)                                    
+    To 192.168.56.14:higit/bluelog.git                                       
+       eb9b468..57f64a3  master -> master                                    
+    
+检查发现并没有触发流水线的执行：
+
+.. image:: ./_static/images/gitlab_submit_triggers_no_trigger_pipeline.png
+    
+我们现在使用 ``curl`` 发送请求，触发流水线触发器执行::
+
+    [root@server ~]# curl -X POST -F token=cf8a32f6f8a583263f6d042e6362d2 -F ref=master http://192.168.56.14/api/v4/projects/2/trigger/pipeline
+    {"id":33,"sha":"57f64a35cad6d069dc62ddc93f0747296383826e","ref":"master","status":"pending","web_url":"http://192.168.56.14/higit/bluelog/pipelines/33","before_sha":"0000000000000000000000000000000000000000","tag":false,"yaml_errors":null,"user":{"id":2,"name":"梅朝辉","username":"meizhaohui","state":"active","avatar_url":"http://192.168.56.14/uploads/-/system/user/avatar/2/avatar.png","web_url":"http://192.168.56.14/meizhaohui"},"created_at":"2019-07-06T22:08:52.761+08:00","updated_at":"2019-07-06T22:08:53.026+08:00","started_at":null,"finished_at":null,"committed_at":null,"duration":null,"coverage":null,"detailed_status":{"icon":"status_pending","text":"等待中","label":"等待中","group":"pending","tooltip":"等待中","has_details":false,"details_path":"/higit/bluelog/pipelines/33","illustration":null,"favicon":"/assets/ci_favicons/favicon_status_pending-5bdf338420e5221ca24353b6bff1c9367189588750632e9a871b7af09ff6a2ae.png"}}
+
+.. image:: ./_static/images/use_curl_post_gitlab_pipeline_trigger.png
+
+可以发现流水线已经被执行，#33号流水线执行了 ``build1`` 和 ``find Bugs`` 作业，其他作业并未执行，与我们预期的相同：
+
+.. image:: ./_static/images/use_curl_post_gitlab_pipeline_trigger_33.png
+
+根据流水线触发器( ``Trigger`` )创建处的提示，我们也可以在依赖项目中配置触发器，依赖项目流水线结束时触发此项目重新构建。
+
+``only`` 和 ``except`` 其他关键字的使用可参才官网文档 https://docs.gitlab.com/ce/ci/yaml/README.html#onlyexcept-basic ，此处暂时不表。
 
 
 
@@ -1271,4 +1440,8 @@ git tag打标签的使用
 - `GitLab CI/CD Variables <https://docs.gitlab.com/ce/ci/variables/README.html>`_
 - `企业级.gitlab-ci.yml示例 <https://gitlab.com/gitlab-org/gitlab-ce/blob/master/.gitlab-ci.yml>`_
 - `Gitlab CI 使用高级技巧 <https://www.jianshu.com/p/3c0cbb6c2936>`_
+- `git tag的用法 <https://www.cnblogs.com/senlinyang/p/8527764.html>`_
+- `Python静态代码检查工具Flake8 <https://www.cnblogs.com/zhangningyang/p/8692546.html>`_
+- `Python代码规范利器Flake8 <http://www.imooc.com/article/51227>`_
+- `Flake8: Your Tool For Style Guide Enforcement <https://flake8.readthedocs.io/en/latest/>`_
 
