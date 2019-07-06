@@ -1427,8 +1427,172 @@ git tag打标签的使用
 
 ``only`` 和 ``except`` 其他关键字的使用可参才官网文档 https://docs.gitlab.com/ce/ci/yaml/README.html#onlyexcept-basic ，此处暂时不表。
 
+``tags``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``tags`` 关键字用于指定 ``GitLab Runner`` 运行器使用哪一个运行器来执行作业。
+
+下面这个例子中，只有运行器注册时定义了 ``ruby`` 和 ``postgres`` 两个标签的运行器才能执行作业::
+
+    job:
+      tags:
+        - ruby
+        - postgres
+
+而我们的 ``bluelog`` 项目中，所有的作业都是使用的是标签为 ``bluelog`` 的运行器::
+
+    find Bugs:
+      stage: code_check
+      only:
+        - triggers
+      script:
+        - echo "Use Flake8 to check python code"
+        - pip install flake8
+        - flake8 --version
+        # - flake8 .
+      tags:
+        - bluelog
+
+运行器标签可用于定义不同平台上运行的作业，如 ``Mac OS X Runner`` 使用 ``osx`` 标签， ``Windows Runner`` 使用 ``windows`` 标签，而 ``Linux Runner`` 使用 ``linux`` 标签:
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 5,13,21
+    
+    windows job:
+      stage:
+        - build
+      tags:
+        - windows
+      script:
+        - echo Hello, %USERNAME%!
+    
+    osx job:
+      stage:
+        - build
+      tags:
+        - osx
+      script:
+        - echo "Hello, $USER!"
+    
+    linux job:
+      stage:
+        - build
+      tags:
+        - linux
+      script:
+        - echo "Hello, $USER!"
 
 
+``allow_failure``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- ``allow_failure`` 可以用于当你想设置一个作业失败的之后并不影响后续的CI组件的时候。失败的作业不会影响到commit提交状态。
+- 如果允许失败的作业失败了，则相应的作业会显示一个黄色的警告，但对流水线成功与否不产生影响。
+
+下面的这个例子中，job1和job2将会并列进行，如果job1失败了，它也不会影响进行中的下一个阶段，因为这里有设置了 ``allow_failure: true`` :
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 5
+
+    job1:
+      stage: test
+      script:
+      - execute_script_that_will_fail
+      allow_failure: true
+    
+    job2:
+      stage: test
+      script:
+      - execute_script_that_will_succeed
+    
+    job3:
+      stage: deploy
+      script:
+      - deploy_to_staging
+
+但是如果上面的job2执行失败，那么job3则会受到影响而不会执行。
+
+``when``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``when`` 关键字用于实现在作业失败时或发生故障时运行的作业 (when is used to implement jobs that are run in case of failure or despite the failure.)。
+
+``when`` 可以设置以下值：
+
+- ``on_success`` ：只有前面的阶段的所有作业都成功时才执行，这是默认值。
+- ``on_failure`` ：当前面阶段的作业至少有一个失败时才执行。
+- ``always`` : 无论前面的作业是否成功，一直执行本作业。
+- ``manual`` ：手动执行作业，作业不会自动执行，需要人工手动点击启动作业。
+- ``delayed`` : 延迟执行作业，配合 ``start_in`` 关键字一起作用， ``start_in`` 设置的值必须小于或等于1小时，``start_in`` 设置的值示例： ``10 seconds`` 、 ``30 minutes`` 、 ``1 hour`` ，前面的作业结束时计时器马上开始计时。
+
+示例：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 17,28,34
+   
+    stages:
+      - build
+      - cleanup_build
+      - test
+      - deploy
+      - cleanup
+    
+    build_job:
+      stage: build
+      script:
+        - make build
+    
+    cleanup_build_job:
+      stage: cleanup_build
+      script:
+        - cleanup build when failed
+      when: on_failure
+    
+    test_job:
+      stage: test
+      script:
+        - make test
+    
+    deploy_job:
+      stage: deploy
+      script:
+        - make deploy
+      when: manual
+    
+    cleanup_job:
+      stage: cleanup
+      script:
+        - cleanup after jobs
+      when: always
+    
+
+说明：
+
+- 只有在 ``build_job`` 构建作业失败时，才会执行 ``cleanup_build_job`` 作业。
+- 需要在GitLab Web界面手动点击，才能执行 ``deploy_job`` 部署作业。
+- 无论之前的作业是否成功还是失败，``cleanup_job`` 清理作业一直会执行。
+
+延时处理的示例:
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 4,5
+    
+    timed rollout 10%:
+      stage: deploy
+      script: echo 'Rolling out 10% ...'
+      when: delayed
+      start_in: 30 minutes
+
+上面的例子创建了一个"timed rollout 10%"作业，会在上一个作业完成后30分钟后才开始执行。
+
+如果你点击"Unschedule"按钮可以取消一个激活的计时器，你也可以点击"Play"按钮，立即执行延时作业。
+
+``environment``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 参考：
 
 - `Getting started with GitLab CI/CD <https://docs.gitlab.com/ce/ci/quick_start/README.html>`_
