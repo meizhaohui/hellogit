@@ -343,7 +343,37 @@ GitLab CI介绍
 - ``only`` 和 ``except`` 允许指定用于过滤forks作业的存储库路径。
 - ``only`` 和 ``except`` 中可以使用特殊的关键字，如 ``branches`` 、 ``tags`` 、 ``api`` 、 ``external`` 、 ``pipelines`` 、 ``pushes`` 、 ``schedules`` 、 ``triggers`` 、 ``web`` 、 ``merge_requests`` 、 ``chats`` 等。
 
-在下面这个例子中，job将只会运行以 ``issue-`` 开始的refs(分支)，然而except中设置将被跳过::
+``only`` 和 ``except`` 中可以使用特殊的关键字：
+
++----------------+---------------------------------------------------------------+
+|     关键字     |                          描述释义                             |
++----------------+---------------------------------------------------------------+
+|    branches    |                    当一个分支被push上来                       |
++----------------+---------------------------------------------------------------+
+|     tags       |         当一个打了tag标记的Release被提交时                    |
++----------------+---------------------------------------------------------------+
+|      api       |   当一个pipline被第二个piplines api所触发调起(不是触发器API)  |
++----------------+---------------------------------------------------------------+
+|    external    |         当使用了GitLab以外的外部CI服务，如Jenkins             |
++----------------+---------------------------------------------------------------+
+|   pipelines    | 针对多项目触发器而言，当使用CI_JOB_TOKEN，                    |
+|                | 并使用gitlab所提供的api创建多个pipelines的时候                |
++----------------+---------------------------------------------------------------+
+|    pushes      |            当pipeline被用户的git push操作所触发的时候         |
++----------------+---------------------------------------------------------------+
+|   schedules    |           针对预定好的pipline计划而言（每日构建一类）         |
++----------------+---------------------------------------------------------------+
+|   triggers     |               用触发器token创建piplines的时候                 |
++----------------+---------------------------------------------------------------+
+|      web       |  在GitLab WEB页面上Pipelines标签页下，按下run pipline的时候   |
++----------------+---------------------------------------------------------------+
+| merge_requests |                 当合并请求创建或更新的时候                    |
++----------------+---------------------------------------------------------------+
+|       chats    |                当使用GitLab ChatOps 创建作业的时候            |
++----------------+---------------------------------------------------------------+
+
+
+在下面这个例子中，job将只会运行以 ``issue-`` 开始的refs(分支)，然而except中指定分支不能执行，所以这个job将不会执行::
 
     job:
       # use regexp
@@ -526,6 +556,9 @@ GitLab CI介绍
 
 上面这个例子中，一旦合并请求中修改了 ``Dockerfile`` 文件或者修改了 ``service`` 目录下的文件，都会触发Docker构建。
 
+``only`` 和 ``except`` 综合示例
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 我们将 ``bluelog`` 项目的描述和主题进行修改：
 
 .. image:: ./_static/images/project_description_tags.png
@@ -542,6 +575,9 @@ GitLab CI介绍
 
 现在朝 ``.gitlab-ci.yml`` 文件中增加 ``only`` 和 ``except`` 策略。
 
+
+匹配 ``issue-`` 开头的分支
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
 创建仅匹配 ``issue-`` 开头的分支：
@@ -685,7 +721,10 @@ GitLab CI介绍
 |               |                                                    |  因此可以issue-pylint分支执行                                                |
 +---------------+----------------------------------------------------+------------------------------------------------------------------------------+
 
-好，我们再将 ``only`` 语法中加入语法大小写不敏感的 ``i`` 标志！再来做一次实现，看看最终的效果。
+大小写不敏感匹配
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+好，我们再将 ``only`` 语法中加入语法大小写不敏感的 ``i`` 标志！再来做一次实验，看看最终的效果。
 
 加入语法大小写不敏感的 ``i`` 标志:
 
@@ -826,6 +865,398 @@ GitLab CI介绍
 |               |                                                     |  可以在issue-pylint和Issue-flake8分支执行                                    |
 +---------------+-----------------------------------------------------+------------------------------------------------------------------------------+
 
+我们再将 ``only`` 语法中将 ``/^issue-.*$/`` 改为 ``/issue/i`` ！再来做一次实验，看看最终的效果。
+
+不区分大小写匹配issue字符：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 31,44,58,70,82
+   
+    # This file is a template, and might need editing before it works on your project.
+    # see https://docs.gitlab.com/ce/ci/yaml/README.html for all available options
+    
+    
+    before_script:
+      - echo "Before script section"
+      - echo "For example you might run an update here or install a build dependency"
+      - echo "Or perhaps you might print out some debugging details"
+    
+    after_script:
+      - echo "After script section"
+      - echo "For example you might do some cleanup here"
+    
+    stages:
+      - build
+      - code_check
+      - test
+      - deploy
+      
+    build1:
+      stage: build
+      before_script:
+        - echo "Before script in build stage that overwrited the globally defined before_script"
+        - echo "Install cloc:A tool to count lines of code in various languages from a given directory."
+        - yum install cloc -y
+      after_script:
+        - echo "After script in build stage that overwrited the globally defined after_script"
+        - cloc --version
+        # cloc .
+      only:
+        - /issue/i
+      except:
+        - master
+      script:
+        - echo "Do your build here"
+        - cloc --version
+        # - cloc .
+      tags:
+        - bluelog
+    
+    find Bugs:
+      stage: code_check
+      only:
+        - /issue/i
+      except:
+        - branches
+      script:
+        - echo "Use Flake8 to check python code"
+        - pip install flake8
+        - flake8 --version
+        # - flake8 .
+      tags:
+        - bluelog
+        
+    test1:
+      stage: test
+      only:
+        - /issue/i
+      except:
+        - /issue-pylint/
+      script:
+        - echo "Do a test here"
+        - echo "For example run a test suite"
+      tags:
+        - bluelog
+    
+    test2:
+      stage: test
+      only:
+        - /issue/i
+      except:
+        - /Issue-flake8/
+      script:
+        - echo "Do another parallel test here"
+        - echo "For example run a lint test"
+      tags:
+        - bluelog
+        
+    deploy1:
+      stage: deploy
+      only:
+        - /issue/i
+      except:
+        - /severe-issues/
+      script:
+        - echo "Do your deploy here"
+      tags:
+        - bluelog
+
+
+预期效果：不区分大小写，``issue-pylint`` 、 ``Issue-flake8`` 和 ``severe-issues`` 分支分支会触发流水线执行，``master`` 主干不会触发流水线执行。
+
+统计作业流水线作业情况：
+
++---------------+----------+--------+-----------+---------+---------+-----------+
+|     分支      |  流水线  | build1 | find Bugs |  test1  |  test2  |  deploy1  |
++---------------+----------+--------+-----------+---------+---------+-----------+
+|     master    |  未触发  |        |           |         |         |           |
++---------------+----------+--------+-----------+---------+---------+-----------+
+| issue-pylint  |    #25   |  Yes   |    No     |    No   |   Yes   |    Yes    |
++---------------+----------+--------+-----------+---------+---------+-----------+
+| Issue-flake8  |    #26   |  Yes   |    No     |   Yes   |    No   |    Yes    |
++---------------+----------+--------+-----------+---------+---------+-----------+
+| severe-issues |    #27   |  Yes   |    No     |   Yes   |   Yes   |    No     |
++---------------+----------+--------+-----------+---------+---------+-----------+
+
+正如我们预期的一样，``issue-pylint`` 、 ``Issue-flake8`` 和 ``severe-issues`` 分支会触发流水线执行，``master`` 主干不会触发流水线执行：
+
+.. image:: ./_static/images/gitlab_only_except_pipeline_25.png
+.. image:: ./_static/images/gitlab_only_except_pipeline_26.png
+.. image:: ./_static/images/gitlab_only_except_pipeline_27.png
+
+解释上面的流水作业策略：
+
++---------------+-----------------------------------------------------+------------------------------------------------------------------------------+
+|    作业       |                     规则定义                        |                                  规则解释                                    |
++---------------+-----------------------------------------------------+------------------------------------------------------------------------------+
+|     build1    |    ``only: - /issue/i except: - master``            |  只在包含issue(不区分大小写)字符的分支执行，不在master主干执行               |
+|               |                                                     |  因此在issue-pylint、Issue-flake8、severe-issues分支执行                     |
++---------------+-----------------------------------------------------+------------------------------------------------------------------------------+
+|   find Bugs   |  ``only: - /issue/i except: - branches``            |  只在包含issue(不区分大小写)字符的分支执行，不在 ``branches`` 分支执行，     |
+|               |                                                     |  所以find Bugs作业一直不会执行                                               |
++---------------+-----------------------------------------------------+------------------------------------------------------------------------------+
+|     test1     | ``only: - /issue/i except: - /issue-pylint/``       |  只在包含issue(不区分大小写)字符的分支执行，不在包含issue-pylint字符的分支   |
+|               |                                                     |  执行，即会在除了issue-pylint分支以外包含issue(不区分大小写)字符的分支执行， |
+|               |                                                     |  所以可以在Issue-flake8和severe-issues分支执行                               |
++---------------+-----------------------------------------------------+------------------------------------------------------------------------------+
+|     test2     | ``only: - /issue/i except: - /Issue-flake8/``       |  只在包含issue(不区分大小写)字符的分支执行，不在包含issue-flake8字符的分支   |
+|               |                                                     |  执行，即会在除了issue-flake8分支以外包含issue(不区分大小写)字符的分支执行， |
+|               |                                                     |  所以可以在issue-pylint和severe-issues分支执行                               |
++---------------+-----------------------------------------------------+------------------------------------------------------------------------------+
+|    deploy1    | ``only: - /issue/i except: - /severe-issues/``      |  只在包含issue(不区分大小写)字符的分支执行，不在包含severe-issues字符的分支  |
+|               |                                                     |  执行，即会在除了severe-issues分支以外包含issue(不区分大小写)字符的分支执行, |
+|               |                                                     |  所以可以在issue-pylint和Issue-flake8分支执行                                |
++---------------+-----------------------------------------------------+------------------------------------------------------------------------------+
+
+
+git tag打标签的使用
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+**使用标签，可以标记提交历史上的特定点为重要提交。**
+
+- 新建tag
+
+``git tag -a v1.0 -m"Release v1.0"``
+
+上面的命令我们成功创建了本地一个版本 V1.0 ,并且添加了附注信息 'Release 1.0'。
+
+- 查看tag
+
+``git tag``
+
+- 显示tag附注信息
+
+``git show v1.0``
+
+- 提交本地tag到远程仓库
+
+``git push origin v1.0``
+
+- 提交本地所有tag到远程仓库
+
+``git push origin --tags``
+
+- 删除本地tag
+
+``git tag -d v1.0``
+
+- 删除远程tag
+
+``git tag push origin :refs/tags/v1.0```
+
+- 获取远程版本
+
+``git fetch origin tag v1.0``
+
+仅当tag标签提交时，才触发流水线执行
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+使用标签，可以标记提交历史上的特定点为重要提交，可以标记重要版本，如下图，是GitLab官方的Tag标签列表：
+
+.. image:: ./_static/images/gitlab_office_tags_list.png
+
+我们将流水线配置文件 ``.gitlab-ci.yml`` 修改为以下内容:
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 31,44,58,70,82
+   
+    # This file is a template, and might need editing before it works on your project.
+    # see https://docs.gitlab.com/ce/ci/yaml/README.html for all available options
+    
+    
+    before_script:
+      - echo "Before script section"
+      - echo "For example you might run an update here or install a build dependency"
+      - echo "Or perhaps you might print out some debugging details"
+    
+    after_script:
+      - echo "After script section"
+      - echo "For example you might do some cleanup here"
+    
+    stages:
+      - build
+      - code_check
+      - test
+      - deploy
+      
+    build1:
+      stage: build
+      before_script:
+        - echo "Before script in build stage that overwrited the globally defined before_script"
+        - echo "Install cloc:A tool to count lines of code in various languages from a given directory."
+        - yum install cloc -y
+      after_script:
+        - echo "After script in build stage that overwrited the globally defined after_script"
+        - cloc --version
+        # cloc .
+      only:
+        - tags
+      except:
+        - master
+      script:
+        - echo "Do your build here"
+        - cloc --version
+        # - cloc .
+      tags:
+        - bluelog
+    
+    find Bugs:
+      stage: code_check
+      only:
+        - tags
+      except:
+        - branches
+      script:
+        - echo "Use Flake8 to check python code"
+        - pip install flake8
+        - flake8 --version
+        # - flake8 .
+      tags:
+        - bluelog
+        
+    test1:
+      stage: test
+      only:
+        - tags
+      except:
+        - /issue-pylint/
+      script:
+        - echo "Do a test here"
+        - echo "For example run a test suite"
+      tags:
+        - bluelog
+    
+    test2:
+      stage: test
+      only:
+        - tags
+      except:
+        - /Issue-flake8/
+      script:
+        - echo "Do another parallel test here"
+        - echo "For example run a lint test"
+      tags:
+        - bluelog
+        
+    deploy1:
+      stage: deploy
+      only:
+        - tags
+      except:
+        - /severe-issues/
+      script:
+        - echo "Do your deploy here"
+      tags:
+        - bluelog
+    
+查看差异::
+
+    $ git diff                                                            
+    diff --git a/.gitlab-ci.yml b/.gitlab-ci.yml                          
+    index 7f16137..8315eb0 100644                                         
+    --- a/.gitlab-ci.yml                                                  
+    +++ b/.gitlab-ci.yml                                                  
+    @@ -28,7 +28,7 @@ build1:                                             
+         - cloc --version                                                 
+         # cloc .                                                         
+       only:                                                              
+    -    - /^issue-.*$/                                                   
+    +    - tags                                                           
+       except:                                                            
+         - master                                                         
+       script:                                                            
+    @@ -41,7 +41,7 @@ build1:                                             
+     find Bugs:                                                           
+       stage: code_check                                                  
+       only:                                                              
+    -    - /^issue-.*$/                                                   
+    +    - tags                                                           
+       except:                                                            
+         - branches                                                       
+       script:                                                            
+    @@ -55,7 +55,7 @@ find Bugs:                                          
+     test1:                                                               
+       stage: test                                                        
+       only:                                                              
+    -    - /^issue-.*$/                                                   
+    +    - tags                                                           
+       except:                                                            
+         - /issue-pylint/                                                 
+       script:                                                            
+    @@ -67,7 +67,7 @@ test1:                                              
+     test2:                                                               
+       stage: test                                                        
+       only:                                                              
+    -    - /^issue-.*$/                                                   
+    +    - tags                                                           
+       except:                                                            
+         - /Issue-flake8/                                                 
+       script:                                                            
+    @@ -79,7 +79,7 @@ test2:                                              
+     deploy1:                                                             
+       stage: deploy                                                      
+       only:                                                              
+    -    - /^issue-.*$/                                                   
+    +    - tags                                                           
+       except:                                                            
+         - /severe-issues/                                                
+       script:                                                            
+
+提交::
+
+    D:\data\github_tmp\higit\bluelog (master -> origin)
+    $ git add -A
+    
+    D:\data\github_tmp\higit\bluelog (master -> origin)
+    $ git commit -m"测试tag标签触发流水线执行"
+    [master eb9b468] 测试tag标签触发流水线执行
+     1 file changed, 7 insertions(+), 5 deletions(-)
+    
+    D:\data\github_tmp\higit\bluelog (master -> origin)
+    $ git push origin master:master
+    Enumerating objects: 5, done.
+    Counting objects: 100% (5/5), done.
+    Delta compression using up to 12 threads
+    Compressing objects: 100% (3/3), done.
+    Writing objects: 100% (3/3), 365 bytes | 365.00 KiB/s, done.
+    Total 3 (delta 2), reused 0 (delta 0)
+    To 192.168.56.14:higit/bluelog.git
+       1bd46f2..eb9b468  master -> master
+
+
+查看是否触发流水线，可以发现没有触发流水线执行：
+
+.. image:: ./_static/images/gitlab_submit_tags_no_trigger_pipeline.png
+
+我们给 ``bluelog`` 打个 ``tag`` 标签，标签名称V0.1::
+
+    D:\data\github_tmp\higit\bluelog (master -> origin)            
+    $ git tag v0.1 -m"Release v0.1"                                
+                                                                   
+    D:\data\github_tmp\higit\bluelog (master -> origin)            
+    $ git tag                                                      
+    v0.1                                                           
+                                                                   
+    D:\data\github_tmp\higit\bluelog (master -> origin)            
+    $ git push origin v0.1                                         
+    Enumerating objects: 1, done.                                  
+    Counting objects: 100% (1/1), done.                            
+    Writing objects: 100% (1/1), 165 bytes | 165.00 KiB/s, done.   
+    Total 1 (delta 0), reused 0 (delta 0)                          
+    To 192.168.56.14:higit/bluelog.git                             
+     * [new tag]         v0.1 -> v0.1                              
+
+可以发现 ``bluelog`` 已经生成了一个tag版本：
+
+.. image:: ./_static/images/gitlab_bluelog_tag_v0.1.png
+
+在流水线列表中，也可以看#31号流水线被触发了，并且标签是v0.1:
+
+.. image:: ./_static/images/gitlab_bluelog_pipeline_31_with_tag_v0.1.png
+
+
 
 
 
@@ -839,4 +1270,5 @@ GitLab CI介绍
 - `GitLab CI/CD Examples <https://docs.gitlab.com/ce/ci/examples/README.html>`_
 - `GitLab CI/CD Variables <https://docs.gitlab.com/ce/ci/variables/README.html>`_
 - `企业级.gitlab-ci.yml示例 <https://gitlab.com/gitlab-org/gitlab-ce/blob/master/.gitlab-ci.yml>`_
+- `Gitlab CI 使用高级技巧 <https://www.jianshu.com/p/3c0cbb6c2936>`_
 
