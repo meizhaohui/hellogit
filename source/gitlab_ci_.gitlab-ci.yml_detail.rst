@@ -1593,6 +1593,87 @@ git tag打标签的使用
 
 ``environment``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``environment`` 用于定义作业部署到特殊的环境中。如果指定了 ``environment`` ，并且在 ``运维`` --> ``环境`` 界面的环境列表中没有该名称下的环境，则会自动创建新环境。
+
+在最简单的格式中，环境关键字可以定义为：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 4,5
+
+    deploy to production:
+      stage: deploy
+      script: git push production HEAD:master
+      environment:
+        name: production
+
+上面的示例中，"deploy to production"作业将会部署代码到"production"生产环境中去。
+
+``environment:name``
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- 在GitLab 8.11之前，环境的名称可以使用 ``environment: production`` 方式定义，现在推荐使用 ``name`` 关键字来定义环境的名称，就像上面的示例一样。
+- ``name`` 关键字的参数可以使用任何定义的CI变量，包括预定义的变量、安全变量、以及 ``.gitlab-ci.yml`` 配置文件中定义的变量，但不能使用 ``script`` 中定义的变量(因为这里面的变量是局部变量)。
+- ``environment`` 环境的名称可以包含：英文字母(letters)、数字(digits)、空格(space)、_、/、$、{、}等。常用的名称有： ``qa``、 ``staging`` 、``production`` 。
+
+.. Attention:: 
+
+    - 软件应用开发的经典模型有这样几个环境：开发环境(development)、集成环境(integration)、测试环境(testing)、QA验证，模拟环境(staging)、生产环境(production)。
+    - 通常一个web项目都需要一个staging环境，一来给客户做演示，二来可以作为production server的一个"预演"，正式发布新功能前能及早发现问题（特别是gem的依赖问题，环境问题等）。
+    - staging server可以理解为production环境的镜像，QA在staging server上对新版本做最后一轮verification, 通过后才能deploy到产品线上。staging环境 尽最大可能来模拟产品线上的环境(硬件，网络拓扑结构，数据库数据)
+
+``environment:url``
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- ``environment:url`` 是可选的，用于设置环境的URL地址的按钮，通过点击按钮可以访问环境相应的URL地址。
+- 下面这个例子中，如果作业都成功完成，那么会在 ``评审请求`` 和 ``环境部署`` 页面创建一个Button按钮，你点击 ``打开运行中的环境`` 按钮就可以访问环境对应的URL地址 ``https://prod.example.com`` 。
+
+示例:
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 4-6
+
+    deploy to production:
+      stage: deploy
+      script: git push production HEAD:master
+      environment:
+        name: production
+        url: https://prod.example.com
+
+``environment:on_stop`` 与 ``environment:action``
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- ``environment:on_stop`` 与 ``environment:action`` 配合使用。
+- 可以通过 ``environment:on_stop`` 关键字定义一个关闭(停止)环境的作业。
+- ``action`` 关键字在关闭环境的作业中定义。
+
+下面的例子联合使用 ``environment:on_stop`` 与 ``environment:action`` 来关闭环境：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 4-6,11-14
+
+    review_app:
+      stage: deploy
+      script: make deploy-app
+      environment:
+        name: review
+        on_stop: stop_review_app
+    
+    stop_review_app:
+      stage: deploy
+      script: make delete-app
+      when: manual
+      environment:
+        name: review
+        action: stop
+
+
+
+
+
 参考：
 
 - `Getting started with GitLab CI/CD <https://docs.gitlab.com/ce/ci/quick_start/README.html>`_
@@ -1608,4 +1689,6 @@ git tag打标签的使用
 - `Python静态代码检查工具Flake8 <https://www.cnblogs.com/zhangningyang/p/8692546.html>`_
 - `Python代码规范利器Flake8 <http://www.imooc.com/article/51227>`_
 - `Flake8: Your Tool For Style Guide Enforcement <https://flake8.readthedocs.io/en/latest/>`_
+- `基于GitLab CI搭建Golang自动构建环境 <https://www.jqhtml.com/46077.html>`_
+- `什么是staging server <https://www.cnblogs.com/beautiful-code/p/6265277.html>`_
 
