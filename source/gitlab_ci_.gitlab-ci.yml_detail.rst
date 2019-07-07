@@ -1670,6 +1670,110 @@ git tag打标签的使用
         name: review
         action: stop
 
+在上面的示例中，设置 ``review_app`` 作业用于部署代码到 ``review`` 评审环境中，同时在 ``on_stop`` 中指定了 ``stop_review_app`` 作业。一旦 ``review_app`` 作业成功执行，就会触发 ``when`` 关键字定义的 ``stop_review_app`` 作业。通过设置为 ``manual`` 手动，需要在GitLab WEB界面点击来允许 ``manual action`` 。
+
+``stop_review_app`` 作业必须配合定义以下关键字：
+
+- ``when`` ： 何时执行删除或停止环境作业
+- ``environment:name`` ： 环境名称需要与上面的 ``review_app`` 作业保持一致，即 ``review`` 评审环境
+- ``environment:action`` ：执行何种执行，``stop`` 停止环境
+- ``stage`` ：与 ``review_app`` 作业的阶段保持一致，都是 ``deploy``
+
+运行完成后，在 ``stop_review_app`` 作业界面需要手动点击 ``停止当前环境`` 才能启动 ``stop_review_app`` 作业的执行。 ``stop_review_app`` 作业执行完成后，会停止  ``review`` 评审环境，在 ``环境`` --> ``已停止`` 列表中可以看到 ``review`` 评审环境。
+
+
+Dynamic environments 动态环境
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+正如前面讲解的，可以在环境的名称中使用变量，在 ``environment:name`` 和 ``environment:url`` 中使用变量，则可以达到动态环境的目的，动态环境需要底层应用的支持。
+
+我们不详细展开，下面是官方的一个示例的改版:
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 4-6
+    
+    deploy as review app:
+      stage: deploy
+      script: make deploy
+      environment:
+        name: review/${CI_COMMIT_REF_NAME}
+        url: https://${CI_ENVIRONMENT_SLUG}.example.com/
+
+上面示例中的 ``${CI_COMMIT_REF_NAME}`` ``${CI_ENVIRONMENT_SLUG}`` 就是两个变量。
+
+
+``cache``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- ``GitLab Runner v0.7.0`` 引入 ``cache`` 缓存机制。
+- ``cache`` 缓存机制，可以在全局设置或者每个作业中设置。
+- 从 ``GitLab 9.0`` 开始， ``cache`` 缓存机制，可以在不同的的流水线或作业之间共享数据。
+- 从 ``GitLab 9.2`` 开始， 在 ``artifacts`` 工件之前恢复缓存。
+- ``cache`` 缓存机制用于指定一系列的文件或文件夹在不同的流水线或作业之间共享数据，仅能使用项目工作空间( ``project workspace`` )中的路径作为缓存的路径。
+- ``如果 ``cache`` 配置的路径是作业工作空间外部，则说明配置是全局的缓存，所有作业共享。
+- 访问 `Cache dependencies in GitLab CI/CD <https://docs.gitlab.com/ce/ci/caching/index.html>`_ 文档来获取缓存是如何工作的以及好的实践实例的例子。
+- ``cache`` 缓存机制的其他介绍请参考 https://docs.gitlab.com/ce/ci/yaml/README.html#cache 。
+
+
+``artifacts``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- ``artifacts`` 用于指定在作业成功、失败、或者一直等状态下时，一系列的文件或文件夹附加到作业中。``artifacts`` 可以称为 ``工件``或者 ``归档文件`` 。
+- 作业完成后，工件被发送到GitLab，可以在GitLab Web界面下载。
+- 默认情况下，只有成功的作业才会生成工件。
+- 并不是所有的 ``executor`` 执行器都支持工件。
+- 工件的详细介绍可参考 `Introduction to job artifacts <https://docs.gitlab.com/ce/user/project/pipelines/job_artifacts.html>`_
+
+``artifacts:paths``
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- ``artifacts:paths`` 用于指定哪些文件或文件夹会被打包成工件，仅仅项目工作空间( ``project workspace`` )的路径可以使用。
+- 要在不同作业间传递工作，请参数 `dependencies <https://docs.gitlab.com/ce/ci/yaml/README.html#dependencies>`_
+
+下面示例，将目录 ``binaries/`` 和文件 ``.config`` 打包成工件：
+
+.. code-block:: yaml
+    :linenos:
+    
+    artifacts:
+      paths:
+        - binaries/
+        - .config
+
+要禁用工件传递，请使用空依赖关系定义作业：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 4
+    
+    job:
+      stage: build
+      script: make build
+      dependencies: []
+
+你可以仅为打标记的release发布版本创建工作，这样可以避免临时构建产生大量的存储需求：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 4-5, 10-14
+    
+    default-job:
+      script:
+        - mvn test -U
+      except:
+        - tags
+    
+    release-job:
+      script:
+        - mvn package -U
+      artifacts:
+        paths:
+          - target/*.war
+      only:
+        - tags
+
+上面的示例中，``default-job`` 作业不会在打标记的release发布版本中执行，而 ``release-job`` 只会在打标记的release发布版本执行，并且将 ``target/*.war`` 打包成工件以供下载。
 
 
 
@@ -1691,4 +1795,6 @@ git tag打标签的使用
 - `Flake8: Your Tool For Style Guide Enforcement <https://flake8.readthedocs.io/en/latest/>`_
 - `基于GitLab CI搭建Golang自动构建环境 <https://www.jqhtml.com/46077.html>`_
 - `什么是staging server <https://www.cnblogs.com/beautiful-code/p/6265277.html>`_
-
+- `Cache dependencies in GitLab CI/CD <https://docs.gitlab.com/ce/ci/caching/index.html>`_
+- `Introduction to job artifacts <https://docs.gitlab.com/ce/user/project/pipelines/job_artifacts.html>`_
+- `dependencies <https://docs.gitlab.com/ce/ci/yaml/README.html#dependencies>`_
