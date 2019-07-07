@@ -1776,6 +1776,112 @@ Dynamic environments 动态环境
 上面的示例中，``default-job`` 作业不会在打标记的release发布版本中执行，而 ``release-job`` 只会在打标记的release发布版本执行，并且将 ``target/*.war`` 打包成工件以供下载。
 
 
+``artifacts:name``
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- 工件的默认名称是 ``artifacts`` ，当下载时名称是 ``artifacts.zip`` 。
+- 通过 ``artifacts:name`` 关键字可以自定义工件的归档名称，这样你可以为每个工件设置独一无二的名称，归档名称可以使用预定义的变量。
+- 如果分支名称中包含斜杠(比如 ``feature/my-feature`` )，推荐使用 ``$CI_COMMIT_REF_SLUG`` 代替 ``$CI_COMMIT_REF_NAME`` 作为工件名称。
+
+
+使用作业名称使用工件名称：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 3
+    
+    job:
+      artifacts:
+        name: "$CI_JOB_NAME"
+        paths:
+          - binaries/
+
+
+使用当前分支或tag版本标签名作为工件名称：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 3
+    
+    job:
+      artifacts:
+        name: "$CI_COMMIT_REF_NAME"
+        paths:
+          - binaries/
+
+
+同时使用当前作业名称以及当前分支或tag版本标签名作为工件名称：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 3
+    
+    job:
+      artifacts:
+        name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
+        paths:
+          - binaries/
+
+
+同时使用当前作业阶段名称以及当前分支名称作为工件名称：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 3
+    
+    job:
+      artifacts:
+        name: "$CI_JOB_STAGE-$CI_COMMIT_REF_NAME"
+        paths:
+          - binaries/
+
+如果你使用的 **Windows系统的Batch批处理脚本** ，则需要把 ``$`` 替换成 ``%``：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 3
+    
+    job:
+      artifacts:
+        name: "%CI_JOB_STAGE%-%CI_COMMIT_REF_NAME%"
+        paths:
+          - binaries/
+
+如果你使用的 **Windows系统的PowerShell脚本** ，则需要把 ``$`` 替换成 ``$env:``：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 3
+    
+    job:
+      artifacts:
+        name: "$env:CI_JOB_STAGE-$env:CI_COMMIT_REF_NAME"
+        paths:
+          - binaries/
+
+``artifacts:untracked``
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- ``artifacts:untracked`` 用于将git未加入版本库的文件作为工件文件。
+- ``artifacts:untracked`` 将会忽略配置文件 ``.gitignore``。
+
+将所有的未跟踪文件打包成工件：
+
+.. code-block:: yaml
+    :linenos:
+    
+    artifacts:
+      untracked: true
+
+将所有的未跟踪文件以及目录 ``binaries`` 中文件打包成工件：
+
+.. code-block:: yaml
+    :linenos:
+    
+    artifacts:
+      untracked: true
+      paths:
+        - binaries/
 
 
 参考：
