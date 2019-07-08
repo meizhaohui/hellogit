@@ -1884,6 +1884,124 @@ Dynamic environments 动态环境
         - binaries/
 
 
+``artifacts:when``
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- ``artifacts:when`` 用于在作业失败时或者忽略失败时上传工件。
+
+``artifacts:when`` 可以设置以下值：
+
+- ``on_success`` ，默认值，当作业成功上传工件。
+- ``on_failure`` ，当作业失败上传工件。
+- ``always`` ，无论作业是否成功一直上传工件。
+
+当作业失败时，上传工件：
+
+.. code-block:: yaml
+    :linenos:
+    
+    job:
+      artifacts:
+        when: on_failure
+
+``artifacts:expire_in``
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- ``artifacts:expire_in`` 用于设置工件的过期时间。
+- 你可以点击界面上的 ``Keep`` 保持按钮，永久保存工件。
+- 工件到期后，默认情况下每小时删除一次工件(通过cron作业)，并且后续不能再访问该工件。
+- 工件默认有效期是30天，可以通过 ``Admin area``  --> ``Settings`` --> ``Continuous Integration and Deployment`` 设置默认的有效性时间。
+- 如果你不提供时间单位的话，工作有效性的时间是以秒为单位的时间，下面是一些示例：
+
+    - ‘42'
+    - ‘3 mins 4 sec'
+    - ‘2 hrs 20 min'
+    - ‘2h20min'
+    - ‘6 mos 1 day'
+    - ‘47 yrs 6 mos and 4d'
+    - ‘3 weeks and 2 days'
+
+下面示例中工件有效期为一周：
+
+.. code-block:: yaml
+    :linenos:
+    
+    job:
+      artifacts:
+        expire_in: 1 week
+
+``artifacts:reports``
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- ``artifacts:reports`` 用于收集测试报告(report)，并在GitLab UI界面中显示出来。
+- 无论作业是否成功，都会收集测试报告。
+- 可以通过设置工件的打包路径 ``artifacts:paths`` 添加测试的报告输出文件。
+- ``artifacts:reports:junit`` 可以用来收集单元测试的报告，查看 `JUnit test reports <https://docs.gitlab.com/ce/ci/junit_test_reports.html>`_ 获取更详细的信息和示例。
+
+
+下面是从Ruby的RSpec测试工具中收集JUnit XML文件的示例：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 5-8
+    
+    rspec:
+      stage: test
+      script:
+      - bundle install
+      - rspec --format RspecJunitFormatter --out rspec.xml
+      artifacts:
+        reports:
+          junit: rspec.xml
+
+.. Note::
+
+    如果你的测试报告是多个XML文件，你可以在一个作业中指定多个单元测试报告，GitLab会自动将他们转换成一个文件，可以像下面这样表示报告的路径：
+    
+    - 文件匹配模式: ``junit: rspec-*.xml``
+    - 文件列表: ``junit: [rspec-1.xml, rspec-2.xml, rspec-3.xml]``
+    - 混合模式：``junit: [rspec.xml, test-results/TEST-*.xml]``
+
+下面是Go语言收集JUnit XML文件的示例：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 5-9
+    
+    ## Use https://github.com/jstemmer/go-junit-report to generate a JUnit report with go
+    golang:
+      stage: test
+      script:
+      - go get -u github.com/jstemmer/go-junit-report
+      - go test -v 2>&1 | go-junit-report > report.xml
+      artifacts:
+        reports:
+          junit: report.xml
+
+下面是C/C++语言使用GoogleTest进行单元测试，收集JUnit XML文件的示例：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 4-7
+
+    cpp:
+      stage: test
+      script:
+      - gtest.exe --gtest_output="xml:report.xml"
+      artifacts:
+        reports:
+          junit: report.xml
+
+.. Attention::
+
+    如果GoogleTest需要运行在多个平台(如 ``x86`` 、 ``x64`` 、``arm`` )，需要为每种平台设置唯一的报告名称，最后将结果汇总起来。
+
+还有一些其他的报告关键字，但社区版不可用，忽略不提。
+
+
+
+
+
 参考：
 
 - `Getting started with GitLab CI/CD <https://docs.gitlab.com/ce/ci/quick_start/README.html>`_
@@ -1904,3 +2022,4 @@ Dynamic environments 动态环境
 - `Cache dependencies in GitLab CI/CD <https://docs.gitlab.com/ce/ci/caching/index.html>`_
 - `Introduction to job artifacts <https://docs.gitlab.com/ce/user/project/pipelines/job_artifacts.html>`_
 - `dependencies <https://docs.gitlab.com/ce/ci/yaml/README.html#dependencies>`_
+- `JUnit test reports <https://docs.gitlab.com/ce/ci/junit_test_reports.html>`_ 
