@@ -2136,7 +2136,7 @@ Dynamic environments 动态环境
 
 - ``include`` 包含关键字可以将其他yaml文件载入到当前的 ``.gitlab-ci.yml`` 配置文件中，详情请查看官网指导 `include <https://docs.gitlab.com/ce/ci/yaml/README.html#include>`_
 
-`` extends``
+``extends``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - `` extends`` 扩展用于定义当前作业从哪里继承。
@@ -2172,3 +2172,4 @@ Dynamic environments 动态环境
 - `JUnit test reports <https://docs.gitlab.com/ce/ci/junit_test_reports.html>`_ 
 - `include <https://docs.gitlab.com/ce/ci/yaml/README.html#include>`_
 - `extends <https://docs.gitlab.com/ce/ci/yaml/README.html#extends>`_
+- `GitLab Pages <https://docs.gitlab.com/ce/user/project/pages/index.html>`_
