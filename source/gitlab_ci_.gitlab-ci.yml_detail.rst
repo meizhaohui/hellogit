@@ -2008,17 +2008,65 @@ Dynamic environments 动态环境
 - 定义空的依赖项，将下不会下载任何工件。
 - 使用依赖项不会考虑前面作业的运行状态。
 
+示例：
 
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 4-6,11-13,18-19,24-25
+    
+    build:osx:
+      stage: build
+      script: make build:osx
+      artifacts:
+        paths:
+          - binaries/
+    
+    build:linux:
+      stage: build
+      script: make build:linux
+      artifacts:
+        paths:
+          - binaries/
+    
+    test:osx:
+      stage: test
+      script: make test:osx
+      dependencies:
+        - build:osx
+    
+    test:linux:
+      stage: test
+      script: make test:linux
+      dependencies:
+        - build:linux
+    
+    deploy:
+      stage: deploy
+      script: make deploy
 
+上面示例中， ``build:osx`` 和 ``build:linux`` 两个作业定义了工件， ``test:osx`` 作业执行时，将会下载并解压  ``build:osx`` 的工件内容。相应的， ``test:linux`` 也会获取 ``build:linux`` 的工件。 ``deploy`` 作业会下载全部工件。
 
+.. Attention::
 
+    如果作为依赖的作业的工件过期或者被删除，那么依赖这个作业的作业将会失败。
 
+``coverage``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+- ``coverage`` 可以从作业的输出log中提取代码覆盖率。
+- 仅支持正则表达式方式获取覆盖率。
+- 字符串的前后必须使用/包含来表明一个正确的正则表达式规则。特殊字符串需要转义。
 
+下面是一个简单的例子：
 
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 2
+    
+    job1:
+      coverage: '/Code coverage:\d+\.\d+%/'
 
-
-
+如在作业日志中输出了"Code coverage:80.2%"，我们使用上面的正则表达式就可以获取到代码的覆盖率。然后在作业的右上角处就会显示 ``Coverage:80.2%`` 。
 
 
 
