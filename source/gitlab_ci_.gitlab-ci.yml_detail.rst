@@ -2131,6 +2131,23 @@ Dynamic environments 动态环境
 - ``missing_dependency_failure`` ： 依赖工件丢失错误时重试。
 - ``runner_unsupported`` ： 运行器不支持错误时重试。
 
+``include``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- ``include`` 包含关键字可以将其他yaml文件载入到当前的 ``.gitlab-ci.yml`` 配置文件中，详情请查看官网指导 `include <https://docs.gitlab.com/ce/ci/yaml/README.html#include>`_
+
+`` extends``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- `` extends`` 扩展用于定义当前作业从哪里继承。
+- 它是使用YAML锚点的替代方案，更加灵活、可读性强。详情请查看官网指导 `extends <https://docs.gitlab.com/ce/ci/yaml/README.html#extends>`_
+
+
+``pages``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- ``pages`` 是一项特殊工作，用于将静态内容上传到GitLab，可用于为您的网站提供服务。详情请查看官网指导 `GitLab Pages <https://docs.gitlab.com/ce/user/project/pages/index.html>`_
+
 
 参考：
 
@@ -2153,3 +2170,5 @@ Dynamic environments 动态环境
 - `Introduction to job artifacts <https://docs.gitlab.com/ce/user/project/pipelines/job_artifacts.html>`_
 - `dependencies <https://docs.gitlab.com/ce/ci/yaml/README.html#dependencies>`_
 - `JUnit test reports <https://docs.gitlab.com/ce/ci/junit_test_reports.html>`_ 
+- `include <https://docs.gitlab.com/ce/ci/yaml/README.html#include>`_
+- `extends <https://docs.gitlab.com/ce/ci/yaml/README.html#extends>`_
