@@ -2069,7 +2069,67 @@ Dynamic environments 动态环境
 如在作业日志中输出了"Code coverage:80.2%"，我们使用上面的正则表达式就可以获取到代码的覆盖率。然后在作业的右上角处就会显示 ``Coverage:80.2%`` 。
 
 
+``retry``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+- ``retry`` 重试关键字用于配置当作业失败时可以重新执行的次数。
+- 当作业失败时，如果配置了 ``retry`` ，那么该作业就会重试，直到允许的最大次数。
+- 如果 ``retry`` 设置值为2，如果第一次重试运行成功了，那么就不会进行第二次重试。
+- ``retry`` 设置值只能是0、1、2三个整数。
+
+下面是一个简单的例子：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 3
+    
+    test:
+      script: rspec
+      retry: 2
+
+- 为了更好的控制重试次数，``retry`` 可以设置以下两个关键字：
+
+    - ``max`` : 最大重试次数
+    - ``when`` : 何时重试
+
+下面这个例子只有当运行器系统出现故障时才能最多重试两次：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 3-5
+    
+    test:
+      script: rspec
+      retry:
+        max: 2
+        when: runner_system_failure
+
+如果上面例子中出现的是其他故障，那么作业不会重试。
+
+为了针对多种重试情形，我们可以使用矩阵形式罗列出错误情形，如下示例：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 3-7
+
+    test:
+      script: rspec
+      retry:
+        max: 2
+        when:
+          - runner_system_failure
+          - stuck_or_timeout_failure
+
+``when`` 可以是以下值：
+
+- ``always`` : 一直重试，默认值。
+- ``unknown_failure`` ：当错误未知时重试。
+- ``script_failure`` ： 脚本错误时重试。
+- ``api_failure`` ： API调用错误时重试。
+- ``stuck_or_timeout_failure`` ： 作业卡信或超时错误时重试。
+- ``runner_system_failure`` ： 运行器系统错误(如设置工作失败)时重试。
+- ``missing_dependency_failure`` ： 依赖工件丢失错误时重试。
+- ``runner_unsupported`` ： 运行器不支持错误时重试。
 
 
 参考：
