@@ -2149,6 +2149,213 @@ Dynamic environments 动态环境
 - ``pages`` 是一项特殊工作，用于将静态内容上传到GitLab，可用于为您的网站提供服务。详情请查看官网指导 `GitLab Pages <https://docs.gitlab.com/ce/user/project/pages/index.html>`_
 
 
+``variables``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- 在 ``.gitlab-ci.yml`` 配置文件中可以通过 ``variables`` 关键字配置全局变量或者作业级的局部变量。
+- 当 ``variables`` 关键字使用在作业层级时，它会覆盖全局变量或预定义变量。
+- 可以在``variables`` 关键字中定义非敏感性配置。
+- 全局变量可以在各个作业中作业，而作业级别的局部变量只能在该作业中使用。
+- 可以在GitLab WEB界面定义一些敏感性配置变量，或者可能变动的变量。
+- 在 ``script`` 中使用 ``export`` 可以导出当前可用的变量信息。
+- 作业内部修改全局变量只对当前作用生效，不会影响其他作业。
+- 可以使用赋值语句对全局变量或局部变量进行重新赋值。
+
+
+下面这个示例定义一个全局数据库的URL地址：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 1-2
+
+    variables:
+      DATABASE_URL: "postgres://postgres@postgres/my_database"
+
+下面修改 ``bluelog`` 项目的配置文件为如下内容：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 4-11,21-25,49-51
+   
+    # This file is a template, and might need editing before it works on your project.
+    # see https://docs.gitlab.com/ce/ci/yaml/README.html for all available options
+    
+    # 定义全局变量
+    variables:
+      # 数据库信息
+      SQLALCHEMY_DATABASE_URI: 'mysql+pymysql://root:root@localhost:3306/bluelog?charset=utf8mb4'
+      # 不发送警告通知
+      SQLALCHEMY_TRACK_MODIFICATIONS: "False"
+      # 显示执行SQL
+      SQLALCHEMY_ECHO: "True"
+      
+    stages:
+      - build
+      - code_check
+      - test
+      - deploy
+      
+    build1:
+      stage: build
+      variables:
+        # 数据库信息
+        SQLALCHEMY_DATABASE_URI: 'mysql+pymysql://root:123456@localhost:3306/bluelog?charset=utf8mb4'
+        # 不显示执行SQL
+        SQLALCHEMY_ECHO: "False"
+      script:
+        - export
+        - echo "Do your build here"
+        - cloc --version
+        - echo -e "SQLALCHEMY_DATABASE_URI:${SQLALCHEMY_DATABASE_URI}"
+        - echo -e "SQLALCHEMY_TRACK_MODIFICATIONS:${SQLALCHEMY_TRACK_MODIFICATIONS}"
+        - echo -e "SQLALCHEMY_ECHO:${SQLALCHEMY_ECHO}"
+      tags:
+        - bluelog
+    
+    find Bugs:
+      stage: code_check
+      script:
+        - echo -e "SQLALCHEMY_DATABASE_URI:${SQLALCHEMY_DATABASE_URI}"
+        - echo -e "SQLALCHEMY_TRACK_MODIFICATIONS:${SQLALCHEMY_TRACK_MODIFICATIONS}"
+        - echo -e "SQLALCHEMY_ECHO:${SQLALCHEMY_ECHO}"
+        - SQLALCHEMY_ECHO="Nothing"
+        - echo -e "SQLALCHEMY_ECHO:${SQLALCHEMY_ECHO}"
+      tags:
+        - bluelog
+        
+    test1:
+      stage: test
+      variables:
+        # CKEditor富文本设置
+        CKEDITOR_SERVE_LOCAL: "True"
+      script:
+        - echo -e "SQLALCHEMY_DATABASE_URI:${SQLALCHEMY_DATABASE_URI}"
+        - echo -e "SQLALCHEMY_TRACK_MODIFICATIONS:${SQLALCHEMY_TRACK_MODIFICATIONS}"
+        - echo -e "SQLALCHEMY_ECHO:${SQLALCHEMY_ECHO}"
+        - echo -e "CKEDITOR_SERVE_LOCAL:${CKEDITOR_SERVE_LOCAL}"
+      tags:
+        - bluelog
+    
+    test2:
+      stage: test
+      script:
+        - echo "Do another parallel test here"
+        - echo "For example run a lint test"
+      tags:
+        - bluelog
+        
+    deploy1:
+      stage: deploy
+      script:
+        - echo "Do your deploy here"
+      tags:
+        - bluelog
+    
+查看各阶段的输出内容。
+
+.. image:: ./_static/images/gitlab_bluelog_variables_job_build1.png
+
+可以看到 ``build1`` 作业中:
+
+- ``SQLALCHEMY_DATABASE_URI`` 已经覆盖了全局定义的 ``SQLALCHEMY_DATABASE_URI`` ，看差异数据库URL中全局是"root:root"，而作业中是"root:123456"。
+- 由于作业中并没有定义 ``SQLALCHEMY_TRACK_MODIFICATIONS`` 变量，所以使用的是全局的 ``SQLALCHEMY_TRACK_MODIFICATIONS`` 变量，输出结果是"False"。
+- 作业中定义的 ``SQLALCHEMY_ECHO: "False"`` 将全局的 ``SQLALCHEMY_ECHO: "True"`` 覆盖，最后显示的是"False"。
+
+再看 ``find Bugs`` 作业：
+
+.. image:: ./_static/images/gitlab_bluelog_variables_job_find_Bugs.png
+
+- 因为没有定义 ``variables`` 关键字，这个作用将使用全局变量。
+- 39、40、41三行输出的结果都是全局变量定义的值。
+- 42行的 ``SQLALCHEMY_ECHO="Nothing"`` 对 ``SQLALCHEMY_ECHO`` 全局变量进行的重新赋值，43行打印出了赋值后的新值是"Nothing"。
+- 上面两个作业说明，作业内部修改全局变量只对当前作用生效，不会影响其他作业。
+- 可以使用赋值语句对全局变量或局部变量进行重新赋值。
+
+再看 ``test1`` 作业：
+
+.. image:: ./_static/images/gitlab_bluelog_variables_job_test1.png
+
+- 该作业定义 ``variables`` 关键字，增加了一个 ``CKEDITOR_SERVE_LOCAL`` 变量。
+- 上一个作业的修改 ``SQLALCHEMY_ECHO="Nothing"`` 对本作业显示 ``SQLALCHEMY_ECHO`` 变量没有影响，仍然会显示全局变量定义的值"True"。再一次证明了作业内部修改全局变量只对当前作用生效，不会影响其他作业。
+
+
+``variables`` 变量的优先级
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+``variables`` 变量的优先级参考 `Priority of environment variables <https://docs.gitlab.com/ce/ci/variables/README.html#priority-of-environment-variables>`_
+
+
+原文::
+
+    Variables of different types can take precedence over other variables, depending on where they are defined.
+    
+    The order of precedence for variables is (from highest to lowest):
+    
+        Trigger variables or scheduled pipeline variables.
+        Project-level variables or protected variables.
+        Group-level variables or protected variables.
+        YAML-defined job-level variables.
+        YAML-defined global variables.
+        Deployment variables.
+        Predefined environment variables.
+
+翻译过来，是这样的::
+
+    不同类型的变量可以优先于其他变量，具体取决于它们的定义位置。
+    
+    变量的优先顺序是（从最高到最低）：
+    
+         触发变量或预定的流水线变量。
+         项目级别变量或受保护变量。
+         组级别变量或受保护变量。
+         YAML定义的作业级变量。
+         YAML定义的全局变量。
+         部署环境变量。
+         预定义的环境变量。
+
+变量中有一些关于git策略的特殊变量，如后续几个小节，当前仅列出，后续详细补充。
+
+Git strategy ``GIT_STRATEGY``
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+待补充！！
+
+Git submodule strategy ``GIT_SUBMODULE_STRATEGY``
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+待补充！！
+
+Git checkout ``GIT_CHECKOUT``
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+待补充！！
+
+Git clean flags ``GIT_CLEAN_FLAGS``
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+待补充！！
+
+Job stages attempts
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- 涉及三个变量 ``GET_SOURCES_ATTEMPTS`` 、 ``ARTIFACT_DOWNLOAD_ATTEMPTS`` 、 ``RESTORE_CACHE_ATTEMPTS`` 。
+
+待补充！！
+
+Shallow cloning ``GIT_DEPTH``
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+待补充！！
+
+
+废弃的关键字 ``types`` 和 ``type``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- 关键字 ``types`` 和 ``type`` 已经废弃。
+- 使用 ``stages`` 阶段定义关键字代替 ``types`` 。
+- 使用 ``stage`` 作业所处阶段关键字代替 ``type`` 。
+
+
 参考：
 
 - `Getting started with GitLab CI/CD <https://docs.gitlab.com/ce/ci/quick_start/README.html>`_
@@ -2173,3 +2380,4 @@ Dynamic environments 动态环境
 - `include <https://docs.gitlab.com/ce/ci/yaml/README.html#include>`_
 - `extends <https://docs.gitlab.com/ce/ci/yaml/README.html#extends>`_
 - `GitLab Pages <https://docs.gitlab.com/ce/user/project/pages/index.html>`_
+- `Priority of environment variables <https://docs.gitlab.com/ce/ci/variables/README.html#priority-of-environment-variables>`_
