@@ -2588,9 +2588,157 @@ Shallow cloning ``GIT_DEPTH``
 ``GIT_CLONE_PATH`` 变量扩展一次后，变量成了 ``$CI_BUILDS_DIR/go/src/namespace/project`` ，这个时候在路径中有一个变量，而 ``GIT_CLONE_PATH`` 变量不会再次扩展 ``$CI_BUILDS_DIR`` 导致作业运行失败。
 
 
+特殊的YAML功能
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+可以使用特殊的YAML功能，如锚点( ``＆`` )，别名( ``*`` )和合并( ``<<`` )，这将使您大大降低 ``.gitlab-ci.yml`` 的复杂性。
+
+隐藏关键字或作业
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+如果我们想暂时禁用某个作业，我们可以将该作业的所有行都注释掉，如下示例：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 1-3
+    
+    #hidden_job:
+    #  script:
+    #    - run test
+
+更好的方法是，我们在作业名称前面增加一个点号( ``.`` )， 这样GitLab CI流水线就会自动处理忽略掉 ``.hidden_job`` 作业。
+
+改成下面这样：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 1
+    
+    .hidden_job:
+      script:
+        - run test
+
+锚点(Anchors)
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- 锚点可以让你容易复制文档内容，锚点可以用来复制或继承某些属性，锚点与隐藏作业一起使用可提供作业模板。
+
+下面的例子使用锚点和合并创建了两个作业，``test1`` 和 ``test2`` ，两个作业都是继承自隐藏作业 ``.job_template`` ，并且都有他们自己独有的工作脚本定义：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 1,8,13
+    
+    .job_template: &job_definition  # Hidden key that defines an anchor named 'job_definition'
+      image: ruby:2.1
+      services:
+        - postgres
+        - redis
+    
+    test1:
+      <<: *job_definition           # Merge the contents of the 'job_definition' alias
+      script:
+        - test1 project
+    
+    test2:
+      <<: *job_definition           # Merge the contents of the 'job_definition' alias
+      script:
+        - test2 project
+    
+- ``&`` 用于设置锚点名称为 ``job_definition`` ，也就是给隐藏作业设置一个锚点 ``job_definition`` 。
+- ``<<`` 合并，将锚点定义的模板内容复制到当前作业的当前位置来。
+- ``*`` 包含锚点的名称 ``job_definition``。
+
+扩展后的配置文件变成下面这样：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 8-11,16-19
+    
+    .job_template:
+      image: ruby:2.1
+      services:
+        - postgres
+        - redis
+    
+    test1:
+      image: ruby:2.1
+      services:
+        - postgres
+        - redis
+      script:
+        - test1 project
+    
+    test2:
+      image: ruby:2.1
+      services:
+        - postgres
+        - redis
+      script:
+        - test2 project
 
 
+再看另外一个示例：
 
+.. code-block:: yaml
+    :linenos:
+    
+    .job_template: &job_definition
+      script:
+        - test project
+    
+    .postgres_services:
+      services: &postgres_definition
+        - postgres
+        - ruby
+    
+    .mysql_services:
+      services: &mysql_definition
+        - mysql
+        - ruby
+    
+    test:postgres:
+      <<: *job_definition
+      services: *postgres_definition
+    
+    test:mysql:
+      <<: *job_definition
+      services: *mysql_definition
+    
+扩展后是这样的：
+
+.. code-block:: yaml
+    :linenos:
+    
+    .job_template:
+      script:
+        - test project
+    
+    .postgres_services:
+      services:
+        - postgres
+        - ruby
+    
+    .mysql_services:
+      services:
+        - mysql
+        - ruby
+    
+    test:postgres:
+      script:
+        - test project
+      services:
+        - postgres
+        - ruby
+    
+    test:mysql:
+      script:
+        - test project
+      services:
+        - mysql
+        - ruby
+    
+可以看到隐藏的关键字或者作业可以方便地用作为模板。
 
 
 
