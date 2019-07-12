@@ -1621,7 +1621,7 @@ git tag打标签的使用
 
     - 软件应用开发的经典模型有这样几个环境：开发环境(development)、集成环境(integration)、测试环境(testing)、QA验证，模拟环境(staging)、生产环境(production)。
     - 通常一个web项目都需要一个staging环境，一来给客户做演示，二来可以作为production server的一个"预演"，正式发布新功能前能及早发现问题（特别是gem的依赖问题，环境问题等）。
-    - staging server可以理解为production环境的镜像，QA在staging server上对新版本做最后一轮verification, 通过后才能deploy到产品线上。staging环境 尽最大可能来模拟产品线上的环境(硬件，网络拓扑结构，数据库数据)
+    - staging server可以理解为production环境的镜像，QA在staging server上对新版本做最后一轮verification, 通过后才能deploy到产品线上。staging环境 尽最大可能来模拟产品线上的环境(硬件，网络拓扑结构，数据库数据)。
 
 ``environment:url``
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -2139,7 +2139,7 @@ Dynamic environments 动态环境
 ``extends``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- `` extends`` 扩展用于定义当前作业从哪里继承。
+- ``extends`` 扩展用于定义当前作业从哪里继承。
 - 它是使用YAML锚点的替代方案，更加灵活、可读性强。详情请查看官网指导 `extends <https://docs.gitlab.com/ce/ci/yaml/README.html#extends>`_
 
 
@@ -2356,6 +2356,244 @@ Shallow cloning ``GIT_DEPTH``
 - 使用 ``stage`` 作业所处阶段关键字代替 ``type`` 。
 
 
+使用 ``GIT_CLONE_PATH`` 自定义构建目录
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- 在默认情况下，自定义构建目录只有在GitLab Runner运行器配置文件中定义了 ``custom_build_dir`` 为 ``enabled`` 开启状态时才可使用。
+- ``docker`` 、 ``kubernetes`` 运行器默认开启了此功能，而其他运行器默认不会开启此功能。
+- 默认情况下，GitLab Runner运行器将仓库克隆到 ``$CI_BUILDS_DIR`` 目录下的一个名称唯一的子目录中，但有时候你的项目可能需要指定一个特殊的路径用来保存下载的仓库，这个时候就可以使用 ``GIT_CLONE_PATH`` 变量来指定克隆文件的存放目录。
+- ``GIT_CLONE_PATH``  必须是 ``$CI_BUILDS_DIR`` 的子目录， ``$CI_BUILDS_DIR`` 目录各个运行器可能不同。
+
+我们尝试在我们的SHELL运行器上去设置 ``GIT_CLONE_PATH`` 目录。
+
+下面是官方给出的一个示例：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 2
+    
+    variables:
+      GIT_CLONE_PATH: $CI_BUILDS_DIR/project-name
+    
+    test:
+      script:
+        - pwd
+
+我们仿照这个示例修改 ``.gitlab-ci.yml`` 配置文件，并进行提交，修改后的内容如下：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 13,29
+    
+    # This file is a template, and might need editing before it works on your project.
+    # see https://docs.gitlab.com/ce/ci/yaml/README.html for all available options
+    
+    # 定义全局变量
+    variables:
+      # 数据库信息
+      SQLALCHEMY_DATABASE_URI: 'mysql+pymysql://root:root@localhost:3306/bluelog?charset=utf8mb4'
+      # 不发送警告通知
+      SQLALCHEMY_TRACK_MODIFICATIONS: "False"
+      # 显示执行SQL
+      SQLALCHEMY_ECHO: "True"
+      # 设置全局构建目录
+      GIT_CLONE_PATH: $CI_BUILDS_DIR/global_folder
+      
+    stages:
+      - build
+      - code_check
+      - test
+      - deploy
+      
+    build1:
+      stage: build
+      variables:
+        # 数据库信息
+        SQLALCHEMY_DATABASE_URI: 'mysql+pymysql://root:123456@localhost:3306/bluelog?charset=utf8mb4'
+        # 不显示执行SQL
+        SQLALCHEMY_ECHO: "False"
+        # 设置全局构建目录
+        GIT_CLONE_PATH: $CI_BUILDS_DIR/sub_folder
+      script:
+        - pwd
+        - export
+        - echo "Do your build here"
+        - cloc --version
+        - echo -e "SQLALCHEMY_DATABASE_URI:${SQLALCHEMY_DATABASE_URI}"
+        - echo -e "SQLALCHEMY_TRACK_MODIFICATIONS:${SQLALCHEMY_TRACK_MODIFICATIONS}"
+        - echo -e "SQLALCHEMY_ECHO:${SQLALCHEMY_ECHO}"
+      tags:
+        - bluelog
+    
+    find Bugs:
+      stage: code_check
+      script:
+        - pwd
+        - echo -e "SQLALCHEMY_DATABASE_URI:${SQLALCHEMY_DATABASE_URI}"
+        - echo -e "SQLALCHEMY_TRACK_MODIFICATIONS:${SQLALCHEMY_TRACK_MODIFICATIONS}"
+        - echo -e "SQLALCHEMY_ECHO:${SQLALCHEMY_ECHO}"
+        - SQLALCHEMY_ECHO="Nothing"
+        - echo -e "SQLALCHEMY_ECHO:${SQLALCHEMY_ECHO}"
+      tags:
+        - bluelog
+        
+    test1:
+      stage: test
+      variables:
+        # CKEditor富文本设置
+        CKEDITOR_SERVE_LOCAL: "True"
+      script:
+        - pwd
+        - echo -e "SQLALCHEMY_DATABASE_URI:${SQLALCHEMY_DATABASE_URI}"
+        - echo -e "SQLALCHEMY_TRACK_MODIFICATIONS:${SQLALCHEMY_TRACK_MODIFICATIONS}"
+        - echo -e "SQLALCHEMY_ECHO:${SQLALCHEMY_ECHO}"
+        - echo -e "CKEDITOR_SERVE_LOCAL:${CKEDITOR_SERVE_LOCAL}"
+      tags:
+        - bluelog
+    
+    test2:
+      stage: test
+      script:
+        - echo "Do another parallel test here"
+        - echo "For example run a lint test"
+      tags:
+        - bluelog
+        
+    deploy1:
+      stage: deploy
+      script:
+        - echo "Do your deploy here"
+      tags:
+        - bluelog
+    
+提交修改构建目录后，流水线执行失败：
+
+.. image:: ./_static/images/gitlab_bluelog_custom_build_directory_failure.png
+
+查看作业详情：
+
+.. image:: ./_static/images/gitlab_bluelog_custom_build_directory_failure_job_details.png
+
+可以看到提示 ``ERROR: Job failed: setting GIT_CLONE_PATH is not allowed, enable `custom_build_dir` feature``
+
+意思是说不允许设置 ``GIT_CLONE_PATH`` 变量，需要设置 ``custom_build_dir`` 属性。
+
+我们参考 `The [runners.custom_build_dir] section <https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-runners-section>`_ 来设置 ``custom_build_dir`` 属性。
+
+我们查看一下GitLab Runner的配置文件内容::
+
+    [root@server ~]# cat /etc/gitlab-runner/config.toml 
+    concurrent = 1
+    check_interval = 0
+    
+    [session_server]
+      session_timeout = 1800
+    
+    [[runners]]
+      name = "bluelog runner"
+      url = "http://192.168.56.14/"
+      token = "1aXYZ5H9n2y8oauWkz7D"
+      executor = "shell"
+      [runners.custom_build_dir]
+      [runners.cache]
+        [runners.cache.s3]
+        [runners.cache.gcs]
+
+我们参考示例::
+
+    [runners.custom_build_dir]
+      enabled = true
+
+开启 ``custom_build_dir`` 属性，修改后配置文件内容如下::
+
+    [root@server ~]# cat /etc/gitlab-runner/config.toml   
+    concurrent = 1
+    check_interval = 0
+    
+    [session_server]
+      session_timeout = 1800
+    
+    [[runners]]
+      name = "bluelog runner"
+      url = "http://192.168.56.14/"
+      token = "1aXYZ5H9n2y8oauWkz7D"
+      executor = "shell"
+      [runners.custom_build_dir]
+        enabled = true
+      [runners.cache]
+        [runners.cache.s3]
+    [runners.cache.gcs]
+
+重新触发"build1"作业，看看效果。
+
+此时可以看到，作业开始运行了，并且在 ``/root/gitlab-runner/builds`` 目录下生成了四个folder相关的目录::
+
+    [root@server builds]# pwd
+    /root/gitlab-runner/builds
+    [root@server builds]# ls -ld *folder*
+    drwxr-xr-x 5 root root 193 Jul 12 23:08 global_folder
+    drwxr-xr-x 3 root root  26 Jul 12 23:08 global_folder.tmp
+    drwxr-xr-x 5 root root 193 Jul 12 23:08 sub_folder
+    drwxr-xr-x 3 root root  26 Jul 12 23:08 sub_folder.tmp
+
+查看"build1"和"find Bugs"作业的详情：
+
+.. image:: ./_static/images/gitlab_bluelog_custom_build_directory_success_build1_job_details.png
+
+可以看到"build1"作业使用作业级定义的 ``GIT_CLONE_PATH: $CI_BUILDS_DIR/sub_folder`` ，仓库会被下载到 ``/root/gitlab-runner/builds/sub_folder`` 目录下。
+
+.. image:: ./_static/images/gitlab_bluelog_custom_build_directory_success_find_bugs_job_details.png
+
+可以看到"build1"作业使用全局级定义的 ``GIT_CLONE_PATH: $CI_BUILDS_DIR/global_folder`` ，仓库会被下载到 ``/root/gitlab-runner/builds/global_folder`` 目录下。
+
+处理并发(Handling concurrency)
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- 当执行器配置并发数 ``concurrent`` 大于1时，有可能导致作业运行失败，因为有可能多个作业都运行在相同的目录上，GitLab Runner运行器并不会去阻止这种情形，管理员和开发人员必须遵守Runner配置的要求。
+- 要避免这种情况，您可以在 ``$CI_BUILDS_DIR`` 中使用唯一路径，因为Runner公开了另外两个提供唯一并发ID的变量：
+
+    - ``$CI_CONCURRENT_ID`` ：给定执行程序中运行的所有作业的唯一ID。
+    - ``$CI_CONCURRENT_PROJECT_ID`` ：在给定执行程序和项目中运行的所有作业的唯一ID。
+
+- 在任何场景和任何执行器中都应该运行良好的最稳定的配置是在 ``GIT_CLONE_PATH`` 中使用 ``$CI_CONCURRENT_ID`` 。 
+
+例如：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 1-2
+    
+    variables:
+      GIT_CLONE_PATH: $CI_BUILDS_DIR/$CI_CONCURRENT_ID/project-name
+    
+    test:
+      script:
+        - pwd
+
+嵌套路径(Nested paths)
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- ``GIT_CLONE_PATH`` 变量最多只能扩展一次，不支持嵌套的变量路径。
+
+下面定义了两个变量：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 2-3
+    
+    variables:
+      GOPATH: $CI_BUILDS_DIR/go
+      GIT_CLONE_PATH: $GOPATH/src/namespace/project
+
+``GIT_CLONE_PATH`` 变量扩展一次后，变量成了 ``$CI_BUILDS_DIR/go/src/namespace/project`` ，这个时候在路径中有一个变量，而 ``GIT_CLONE_PATH`` 变量不会再次扩展 ``$CI_BUILDS_DIR`` 导致作业运行失败。
+
+
+
+
+
+
+
+
 参考：
 
 - `Getting started with GitLab CI/CD <https://docs.gitlab.com/ce/ci/quick_start/README.html>`_
@@ -2381,3 +2619,4 @@ Shallow cloning ``GIT_DEPTH``
 - `extends <https://docs.gitlab.com/ce/ci/yaml/README.html#extends>`_
 - `GitLab Pages <https://docs.gitlab.com/ce/user/project/pages/index.html>`_
 - `Priority of environment variables <https://docs.gitlab.com/ce/ci/variables/README.html#priority-of-environment-variables>`_
+- `The [runners.custom_build_dir] section <https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-runners-section>`_ 
