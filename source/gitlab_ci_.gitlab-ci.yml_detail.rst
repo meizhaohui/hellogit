@@ -2162,7 +2162,7 @@ Dynamic environments 动态环境
 
 - 在 ``.gitlab-ci.yml`` 配置文件中可以通过 ``variables`` 关键字配置全局变量或者作业级的局部变量。
 - 当 ``variables`` 关键字使用在作业层级时，它会覆盖全局变量或预定义变量。
-- 可以在``variables`` 关键字中定义非敏感性配置。
+- 可以在 ``variables`` 关键字中定义非敏感性配置。
 - 全局变量可以在各个作业中作业，而作业级别的局部变量只能在该作业中使用。
 - 可以在GitLab WEB界面定义一些敏感性配置变量，或者可能变动的变量。
 - 在 ``script`` 中使用 ``export`` 可以导出当前可用的变量信息。
@@ -2322,6 +2322,146 @@ Dynamic environments 动态环境
          预定义的环境变量。
 
 变量中有一些关于git策略的特殊变量，如后续几个小节，当前仅列出，后续详细补充。
+
+使用export导出的变量示例
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+export的导出示例::
+
+    $ export
+    declare -x CI="true"
+    declare -x CI_API_V4_URL="http://192.168.56.14/api/v4"
+    declare -x CI_BUILDS_DIR="/root/gitlab-runner/builds"
+    declare -x CI_BUILD_BEFORE_SHA="84f1f0e417d7e340770a4bb05076bf74f3231991"
+    declare -x CI_BUILD_ID="128"
+    declare -x CI_BUILD_NAME="build1"
+    declare -x CI_BUILD_REF="a6554ffa0d2ae67c675fe9768f702f0b1bb65f5a"
+    declare -x CI_BUILD_REF_NAME="master"
+    declare -x CI_BUILD_REF_SLUG="master"
+    declare -x CI_BUILD_STAGE="build"
+    declare -x CI_BUILD_TOKEN="[MASKED]"
+    declare -x CI_COMMIT_BEFORE_SHA="84f1f0e417d7e340770a4bb05076bf74f3231991"
+    declare -x CI_COMMIT_DESCRIPTION=""
+    declare -x CI_COMMIT_MESSAGE="全局变量与局部变量的使用
+    "
+    declare -x CI_COMMIT_REF_NAME="master"
+    declare -x CI_COMMIT_REF_SLUG="master"
+    declare -x CI_COMMIT_SHA="a6554ffa0d2ae67c675fe9768f702f0b1bb65f5a"
+    declare -x CI_COMMIT_SHORT_SHA="a6554ffa"
+    declare -x CI_COMMIT_TITLE="全局变量与局部变量的使用"
+    declare -x CI_CONCURRENT_ID="0"
+    declare -x CI_CONCURRENT_PROJECT_ID="0"
+    declare -x CI_CONFIG_PATH=".gitlab-ci.yml"
+    declare -x CI_JOB_ID="128"
+    declare -x CI_JOB_NAME="build1"
+    declare -x CI_JOB_STAGE="build"
+    declare -x CI_JOB_TOKEN="[MASKED]"
+    declare -x CI_JOB_URL="http://192.168.56.14/higit/bluelog/-/jobs/128"
+    declare -x CI_NODE_TOTAL="1"
+    declare -x CI_PAGES_DOMAIN="example.com"
+    declare -x CI_PAGES_URL="http://higit.example.com/bluelog"
+    declare -x CI_PIPELINE_ID="45"
+    declare -x CI_PIPELINE_IID="48"
+    declare -x CI_PIPELINE_SOURCE="push"
+    declare -x CI_PIPELINE_URL="http://192.168.56.14/higit/bluelog/pipelines/45"
+    declare -x CI_PROJECT_DIR="/root/gitlab-runner/builds/1aXYZ5H9/0/higit/bluelog"
+    declare -x CI_PROJECT_ID="2"
+    declare -x CI_PROJECT_NAME="bluelog"
+    declare -x CI_PROJECT_NAMESPACE="higit"
+    declare -x CI_PROJECT_PATH="higit/bluelog"
+    declare -x CI_PROJECT_PATH_SLUG="higit-bluelog"
+    declare -x CI_PROJECT_URL="http://192.168.56.14/higit/bluelog"
+    declare -x CI_PROJECT_VISIBILITY="private"
+    declare -x CI_REGISTRY_PASSWORD="[MASKED]"
+    declare -x CI_REGISTRY_USER="gitlab-ci-token"
+    declare -x CI_REPOSITORY_URL="http://gitlab-ci-token:[MASKED]@192.168.56.14/higit/bluelog.git"
+    declare -x CI_RUNNER_DESCRIPTION="bluelog runner"
+    declare -x CI_RUNNER_EXECUTABLE_ARCH="linux/amd64"
+    declare -x CI_RUNNER_ID="1"
+    declare -x CI_RUNNER_REVISION="3001a600"
+    declare -x CI_RUNNER_TAGS="bluelog"
+    declare -x CI_RUNNER_VERSION="11.10.0"
+    declare -x CI_SERVER="yes"
+    declare -x CI_SERVER_NAME="GitLab"
+    declare -x CI_SERVER_REVISION="8a802d1c6b7"
+    declare -x CI_SERVER_VERSION="11.10.6"
+    declare -x CI_SERVER_VERSION_MAJOR="11"
+    declare -x CI_SERVER_VERSION_MINOR="10"
+    declare -x CI_SERVER_VERSION_PATCH="6"
+    declare -x CI_SHARED_ENVIRONMENT="true"
+    declare -x CONFIG_FILE="/etc/gitlab-runner/config.toml"
+    declare -x FF_K8S_USE_ENTRYPOINT_OVER_COMMAND="true"
+    declare -x FF_USE_LEGACY_GIT_CLEAN_STRATEGY="false"
+    declare -x GITLAB_CI="true"
+    declare -x GITLAB_FEATURES=""
+    declare -x GITLAB_USER_EMAIL="mzh.whut@gmail.com"
+    declare -x GITLAB_USER_ID="2"
+    declare -x GITLAB_USER_LOGIN="meizhaohui"
+    declare -x GITLAB_USER_NAME="梅朝辉"
+    declare -x HISTCONTROL="ignoredups"
+    declare -x HISTSIZE="1000"
+    declare -x HOME="/root"
+    declare -x HOSTNAME="server.hopewait"
+    declare -x LANG="en_US.utf8"
+    declare -x LC_ALL="en_US.utf8"
+    declare -x LESSOPEN="||/usr/bin/lesspipe.sh %s"
+    declare -x LOGNAME="root"
+    declare -x LS_COLORS="rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=01;05;37;41:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.Z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.jpg=01;35:*.jpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.axv=01;35:*.anx=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=01;36:*.au=01;36:*.flac=01;36:*.mid=01;36:*.midi=01;36:*.mka=01;36:*.mp3=01;36:*.mpc=01;36:*.ogg=01;36:*.ra=01;36:*.wav=01;36:*.axa=01;36:*.oga=01;36:*.spx=01;36:*.xspf=01;36:"
+    declare -x MAIL="/var/spool/mail/root"
+    declare -x OLDPWD="/root/gitlab-runner"
+    declare -x PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin:/root/bin"
+    declare -x PIPENV_PYPI_MIRROR="https://mirrors.aliyun.com/pypi/simple"
+    declare -x PIPENV_VENV_IN_PROJECT="1"
+    declare -x PWD="/root/gitlab-runner/builds/1aXYZ5H9/0/higit/bluelog"
+    declare -x SHELL="/bin/bash"
+    declare -x SHLVL="3"
+    declare -x SQLALCHEMY_DATABASE_URI="mysql+pymysql://root:123456@localhost:3306/bluelog?charset=utf8mb4"
+    declare -x SQLALCHEMY_ECHO="False"
+    declare -x SQLALCHEMY_TRACK_MODIFICATIONS="False"
+    declare -x SSH_CLIENT="192.168.56.1 51472 22"
+    declare -x SSH_CONNECTION="192.168.56.1 51472 192.168.56.14 22"
+    declare -x SSH_TTY="/dev/pts/0"
+    declare -x TERM="linux"
+    declare -x USER="root"
+    declare -x XDG_RUNTIME_DIR="/run/user/0"
+    declare -x XDG_SESSION_ID="41"
+
+.. Attention::
+
+    - 不要将敏感信息，如用户密码、Token等信息放在 ``.gitlab-ci.yml`` 配置文件中定义变量。
+    - 敏感信息可以WEB配置界面添加变量，并将变量设置为 ``Protected受保护`` 或者 ``Masked`` ，设置为 ``Masked`` 的变量不会直接显示在作业日志信息中。
+
+关闭全局层级定义的变量
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- 如果你要在作业层级关闭全局层级定义的变量，可以给 ``variables`` 关键字定义一个空的 ``hash`` 。
+
+如下示例：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 2
+    
+    job_name:
+      variables: {}
+
+变量定义时使用其他变量
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- 可以在变量定义时，使用其他的变量，需要使用 ``$$`` 进行转义。
+
+看下面的示例：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 2
+    
+    variables:
+      LS_CMD: 'ls $FLAGS $$TMP_DIR'
+      FLAGS: '-al'
+    script:
+      - 'eval $LS_CMD'  # will execute 'ls -al $TMP_DIR'
+
 
 Git strategy ``GIT_STRATEGY``
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
