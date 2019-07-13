@@ -1256,6 +1256,8 @@ git tag打标签的使用
 
 .. image:: ./_static/images/gitlab_bluelog_pipeline_31_with_tag_v0.1.png
 
+.. _trigger_pipeline_label:
+
 使用流水线触发器触发流水线执行
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -2131,6 +2133,12 @@ Dynamic environments 动态环境
 - ``missing_dependency_failure`` ： 依赖工件丢失错误时重试。
 - ``runner_unsupported`` ： 运行器不支持错误时重试。
 
+``trigger``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- ``trigger`` 关键字用于多项目流水线时，定义下游的流水线工程，由于社区版本不支持此功能，不详细介绍。具体可参考 `trigger <https://docs.gitlab.com/ce/ci/yaml/README.html#trigger-premium>`_
+
+
 ``include``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -2741,6 +2749,50 @@ Shallow cloning ``GIT_DEPTH``
 可以看到隐藏的关键字或者作业可以方便地用作为模板。
 
 
+Triggers触发器
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- 当使用触发器令牌触发流水线运行时，触发器可用于强制重建特定分支，标记或提交，并使用API调用。
+- 触发器使用可参考 :ref:`trigger_pipeline_label` 。
+
+
+忽略CI检查
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- 当你提交的commit日志信息中包含 ``[ci skip]`` 或者 ``[skip ci]`` (忽略大小写)，提交可以成功但是会忽略流水线的执行。
+- 或者，在 ``git push`` 时添加推送选项，如 ``git push -o ci.skip`` 。
+
+
+我们第一次修改配置文件，commit日志为"移除自定义构建目录，测试忽略ci构建 ci skip"，包含有 ``ci skip`` 关键字，但是没有左右中括号，进行提交：
+
+.. image:: ./_static/images/gitlab_bluelog_git_commit_with_ci_skip.png
+
+但是发现流水线被触发了，正常运行了：
+
+.. image:: ./_static/images/gitlab_bluelog_git_commit_with_ci_skip_trigger_success_pipeline.png
+
+我们第二次修改配置文件，commit日志为"移除自定义构建目录，测试忽略ci构建 [CI Skip]"，包含有 ``[CI Skip]`` 关键字，进行提交：
+
+.. image:: ./_static/images/gitlab_bluelog_git_commit_with_CI_Skip_Capitalization.png
+
+可以发现流水线没有被触发，但是提交已经创建成功了：
+
+.. image:: ./_static/images/gitlab_bluelog_git_commit_with_ci_skip_trigger_skipped_pipeline.png
+.. image:: ./_static/images/gitlab_bluelog_git_commit_with_ci_skip_trigger_skipped_pipeline1.png
+
+我们第三次修改配置文件，commit日志为"测试使用git push添加推送选项"，进行提交：
+
+.. image:: ./_static/images/gitlab_bluelog_git_commit_with_git_push_ci_skip_option.png
+
+可以发现流水线没有被触发，但是提交已经创建成功了：
+
+.. image:: ./_static/images/gitlab_bluelog_git_commit_with_git_push_ci_skip_option_trigger_skipped_pipeline.png
+
+
+
+
+
+
 
 参考：
 
@@ -2768,3 +2820,4 @@ Shallow cloning ``GIT_DEPTH``
 - `GitLab Pages <https://docs.gitlab.com/ce/user/project/pages/index.html>`_
 - `Priority of environment variables <https://docs.gitlab.com/ce/ci/variables/README.html#priority-of-environment-variables>`_
 - `The [runners.custom_build_dir] section <https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-runners-section>`_ 
+- `trigger <https://docs.gitlab.com/ce/ci/yaml/README.html#trigger-premium>`_
