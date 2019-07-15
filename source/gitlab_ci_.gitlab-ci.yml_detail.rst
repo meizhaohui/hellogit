@@ -2463,15 +2463,259 @@ export的导出示例::
       - 'eval $LS_CMD'  # will execute 'ls -al $TMP_DIR'
 
 
-Git strategy ``GIT_STRATEGY``
+克隆策略Git strategy ``GIT_STRATEGY``
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-待补充！！
+- 你可以通过设置 ``GIT_STRATEGY`` 变量来指定GitLab Runner运行作业时使用什么样的方式来获取最新的代码，可以在全局级或作业级进行设置。
+- ``GIT_STRATEGY`` 变量可以设置为 ``fetch`` 、``clone`` 、``none`` 。
+- ``clone`` 是最慢的方式，这种方式会从头开始克隆仓库。
+- ``fetch`` 相对来说更快一点，如果本地项目空间中存在远程仓库的克隆，只用从远程获取最新到本地，而不用从头开始克隆整个仓库(如果本地项目空间不存在远程仓库的克隆的话，则此时等同于clone，从头开始克隆远程仓库)。
+- ``none`` 也是利用本地项目空间中的文件，但不会从远程获取到最新的修改数据，本地数据不是最新的。
 
-Git submodule strategy ``GIT_SUBMODULE_STRATEGY``
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+下面我们通过修改 ``.gitlab-ci.yml`` 配置文件来查看这个现象：
 
-待补充！！
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 16,23,26,33,36,43,45
+        
+    # This file is a template, and might need editing before it works on your project.
+    # see https://docs.gitlab.com/ce/ci/yaml/README.html for all available options
+    
+    stages:
+      - build
+      - code_check
+      - test
+      - deploy
+      
+    build1:
+      stage: build
+      script:
+        - pwd
+        - export
+        - echo "Do your build here"
+        - echo "GIT_STRATEGY:${GIT_STRATEGY}"
+      tags:
+        - bluelog
+    
+    find Bugs:
+      stage: code_check
+      variables:
+        GIT_STRATEGY: "fetch"
+      script:
+        - pwd
+        - echo "GIT_STRATEGY:${GIT_STRATEGY}"
+      tags:
+        - bluelog
+        
+    test1:
+      stage: test
+      variables:
+        GIT_STRATEGY: "clone"
+      script:
+        - pwd
+        - echo "GIT_STRATEGY:${GIT_STRATEGY}"
+      tags:
+        - bluelog
+    
+    test2:
+      stage: test
+      variables:
+        GIT_STRATEGY: "none"
+      script:
+        - echo "GIT_STRATEGY:${GIT_STRATEGY}"
+      tags:
+        - bluelog
+        
+    deploy1:
+      stage: deploy
+      script:
+        - echo "Do your deploy here"
+      tags:
+        - bluelog
+
+提交后，流水线触发了：
+
+.. image:: ./_static/images/gitlab_bluelog_git_strategy_pipeline.png
+
+我们检查一下每个作业的log日志信息：
+
+先看build1作业：
+
+.. image:: ./_static/images/gitlab_bluelog_git_strategy_pipeline_build1_job_top.png
+.. image:: ./_static/images/gitlab_bluelog_git_strategy_pipeline_build1_job_bottom.png
+
+可以看到默认情况下，会使用 ``git fetch`` 方式来获取最新的修改，并且 ``echo "GIT_STRATEGY:${GIT_STRATEGY}"`` 打印 ``${GIT_STRATEGY}`` 变量为空，也就是默认情况下GitLab并不会设置 ``GIT_STRATEGY`` 变量。
+
+再看一下find Bugs作业：
+
+.. image:: ./_static/images/gitlab_bluelog_git_strategy_find_Bugs.png
+
+此处也是直接使用现有项目空间里面的本地仓库，使用 ``git fetch`` 方式来获取最新的修改，由于在作业级中设置了 ``GIT_STRATEGY`` 变量，最后打印出打印 ``${GIT_STRATEGY}`` 变量的值为 ``fetch`` 。
+
+再看一下test1作业：
+
+.. image:: ./_static/images/gitlab_bluelog_git_strategy_test1.png
+
+因为设置了 ``GIT_STRATEGY: "clone"`` ，这个时候GitLab Runner会从头开始克隆远程仓库，最后打印出打印 ``${GIT_STRATEGY}`` 变量的值为 ``clone`` 。
+
+再看一下test2作业：
+
+.. image:: ./_static/images/gitlab_bluelog_git_strategy_test2.png
+
+因为设置了 ``GIT_STRATEGY: "none"`` ，这个时候GitLab Runner什么也不做，不会获取最新的修改，最后打印出打印 ``${GIT_STRATEGY}`` 变量的值为 ``none`` 。
+
+我们再修改一下配置文件为下面的内容：
+
+.. code-block:: yaml
+    :linenos:
+    
+    # This file is a template, and might need editing before it works on your project.
+    # see https://docs.gitlab.com/ce/ci/yaml/README.html for all available options
+    
+    stages:
+      - build
+      - code_check
+      - test
+      - deploy
+      
+    build1:
+      stage: build
+      script:
+        - pwd
+        - export
+        - echo "Do your build here"
+        - echo "GIT_STRATEGY:${GIT_STRATEGY}"
+        - du -sh
+        - ls -lah README.md
+      tags:
+        - bluelog
+    
+    find Bugs:
+      stage: code_check
+      variables:
+        GIT_STRATEGY: "fetch"
+      script:
+        - pwd
+        - echo "GIT_STRATEGY:${GIT_STRATEGY}"
+        - du -sh
+        - ls -lah README.md
+      when: manual
+      tags:
+        - bluelog
+        
+    test1:
+      stage: test
+      variables:
+        GIT_STRATEGY: "clone"
+      script:
+        - pwd
+        - echo "GIT_STRATEGY:${GIT_STRATEGY}"
+        - du -sh
+        - ls -lah README.md
+      when: manual
+      tags:
+        - bluelog
+    
+    test2:
+      stage: test
+      variables:
+        GIT_STRATEGY: "none"
+      script:
+        - echo "GIT_STRATEGY:${GIT_STRATEGY}"
+        - du -sh
+        - ls -lah README.md
+      when: manual
+      tags:
+        - bluelog
+        
+    deploy1:
+      stage: deploy
+      script:
+        - echo "Do your deploy here"
+        - du -sh
+        - ls -lah README.md
+      when: manual
+      tags:
+        - bluelog
+    
+提交后，流水线触发了，但有build1作业后面的作业需要手动执行：
+
+.. image:: ./_static/images/gitlab_bluelog_git_strategy_manual_pipeline.png
+
+我们检查build1作业：
+
+.. image:: ./_static/images/gitlab_bluelog_git_strategy_manual_pipeline_build1_job_bottom.png
+
+可以获取到整个仓库的大小，也可以读取到仓库中"README.md"文件。
+
+假设我们此时在服务器端将 ``/root/gitlab-runner/builds/1aXYZ5H9/0/higit/bluelog`` 和 ``/root/gitlab-runner/builds/1aXYZ5H9/0/higit/bluelog.tmp`` 目录删除，并触发find Bugs作业运行：
+
+.. image:: ./_static/images/gitlab_bluelog_git_strategy_manual_pipeline_delete_project_workspace.png
+
+因为设置了 ``GIT_STRATEGY: "fetch"`` ，但因为我把项目空间里面的本地仓库内容都删除了，这个时候GitLab Runner发现本地并没有远程仓库的文件，只能从头开始克隆远程仓库，最后打印出打印 ``${GIT_STRATEGY}`` 变量的值为 ``fetch`` 。
+
+.. image:: ./_static/images/gitlab_bluelog_git_strategy_manual_pipeline_find_bugs_job.png
+
+再触发test1作业运行，还是从头开始下载远程仓库：
+
+.. image:: ./_static/images/gitlab_bluelog_git_strategy_manual_pipeline_test1_job.png
+
+关键一步，我们再次删除工作空间中的 ``/root/gitlab-runner/builds/1aXYZ5H9/0/higit/bluelog`` 和 ``/root/gitlab-runner/builds/1aXYZ5H9/0/higit/bluelog.tmp`` 目录：
+
+.. image:: ./_static/images/gitlab_bluelog_git_strategy_manual_pipeline_delete_project_workspace_again.png
+
+再触发test2作业运行：
+
+.. image:: ./_static/images/gitlab_bluelog_git_strategy_manual_pipeline_test2_job_failed.png
+
+此时发现，GitLab Runner仅仅创建了一个目录 ``bluelog`` ，但不从远程获取数据，这个时候我们获取仓库目录数据大小为0，也查看不到README.md文件的详情，由于没有README.md文件，执行命令就报错。
+
+- 可以看出设置 ``GIT_STRATEGY: "none"`` 可能会遇到意想不到的情况！
+- 为了加快流水线工程的执行，建议使用 ``fetch`` 模式。
+- 流水线的Git策略默认是 ``git fetch`` 模式。
+
+流水线的默认Git策略，可以在项目的流水线通用设置中查看：
+
+.. image:: ./_static/images/gitlab_bluelog_default_git_strategy.png
+
+
+子模块策略Git submodule strategy ``GIT_SUBMODULE_STRATEGY``
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+- ``GIT_SUBMODULE_STRATEGY`` 类似于 ``GIT_STRATEGY`` ，当你的项目需要包含别的项目代码时，可以将别的项目作为你的项目的子模块，这个时候就可以使用 ``GIT_SUBMODULE_STRATEGY`` 。
+- ``GIT_SUBMODULE_STRATEGY`` 默认取值 ``none`` ，即拉取代码时，子模块不会被引入。
+- ``GIT_SUBMODULE_STRATEGY`` 可取值 ``normal`` ，意味着在只有顶级子模块会被引入。
+- ``GIT_SUBMODULE_STRATEGY`` 可取值 ``recursive`` ，递归的意思，意味着所有级子模块会被引入。
+
+子模块需要配置在 ``.gitmodules`` 配置文件中，下面是两个示例：
+
+场景：
+
+- 你的项目地址： ``https://gitlab.com/secret-group/my-project`` ，你可以使用 ``git clone git@gitlab.com:secret-group/my-project.git`` 检出代码。
+
+- 你的项目依赖 ``https://gitlab.com/group/project`` ，你可以将这个模块作为项目的子模块。
+
+子模块与本项目在同一个服务上，可以使用相对引用：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 2-3
+    
+    [submodule "project"]
+      path = project
+      url = ../../group/project.git
+
+子模块与本项目不在同一个服务上，使用相对绝对URL：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 2-3
+    
+    [submodule "project-x"]
+      path = project-x
+      url = https://gitserver.com/group/project-x.git
+
+详细可参考 `Using Git submodules with GitLab CI <https://docs.gitlab.com/ce/ci/git_submodules.html>`_
 
 Git checkout ``GIT_CHECKOUT``
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -2961,3 +3205,4 @@ Triggers触发器
 - `Priority of environment variables <https://docs.gitlab.com/ce/ci/variables/README.html#priority-of-environment-variables>`_
 - `The [runners.custom_build_dir] section <https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-runners-section>`_ 
 - `trigger <https://docs.gitlab.com/ce/ci/yaml/README.html#trigger-premium>`_
+- `Using Git submodules with GitLab CI <https://docs.gitlab.com/ce/ci/git_submodules.html>`_
