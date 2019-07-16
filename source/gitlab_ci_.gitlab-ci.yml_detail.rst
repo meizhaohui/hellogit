@@ -2717,10 +2717,30 @@ export的导出示例::
 
 详细可参考 `Using Git submodules with GitLab CI <https://docs.gitlab.com/ce/ci/git_submodules.html>`_
 
-Git checkout ``GIT_CHECKOUT``
+检出分支设置Git checkout ``GIT_CHECKOUT``
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-待补充！！
+- 当 ``GIT_STRATEGY`` 设置为 ``fetch`` 或者 ``clone`` 时，可以通过 ``GIT_CHECKOUT`` 变量设置是否需要做 ``git checkout`` 操作，如果未指定该参数，默认值为 ``true`` ，即需要做 ``git checkout`` 操作。
+- 可以在全局级或作业级进行设置。
+- 如果 ``GIT_CHECKOUT`` 变量设置为 ``true`` ，GitLab Runner都会将本地工作副本检出并切换到当前流水线相关的修订版本分支上。
+- 如果 ``GIT_CHECKOUT`` 变量设置为 ``false`` ，那么运行器操作如下：
+
+    - ``fetch`` 操作时，更新仓库并在当前版本上保留工作副本。
+    - ``clone`` 操作时，克隆仓库并在默认分支中保留工作副本。
+    
+下面示例不进行自动切换到分支：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 2-3
+    
+    variables:
+      GIT_STRATEGY: clone
+      GIT_CHECKOUT: "false"
+    script:
+      - git checkout -B master origin/master
+      - git merge $CI_COMMIT_SHA
+
 
 Git clean flags ``GIT_CLEAN_FLAGS``
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
