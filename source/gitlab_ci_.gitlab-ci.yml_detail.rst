@@ -2742,22 +2742,61 @@ export的导出示例::
       - git merge $CI_COMMIT_SHA
 
 
-Git clean flags ``GIT_CLEAN_FLAGS``
+清理工作Git clean flags ``GIT_CLEAN_FLAGS``
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-待补充！！
+- 可以使用 ``GIT_CLEAN_FLAGS`` 变量来控制在检出源码后 ``git clean`` 的默认行为，可以在全局级或作业级进行设置。
+- ``GIT_CLEAN_FLAGS`` 变量接受  ``git clean`` 命令的所有参数。
+- 如果指定了 ``GIT_CHECKOUT: "false"`` ，那么 ``git clean`` 将不可用。
+- ``git-clean`` : Remove untracked files from the working tree，即删除未跟踪的文件。
+- ``git clean`` 命令用来从你的工作目录中删除所有没有tracked过的文件， ``git reset --hard`` 用于删除跟踪文件的修改记录。
+- ``git clean -n`` 命令列出将被删除的文件。
+- ``git clean -f`` 命令删除当前目录下所有没有跟踪过的文件。
+- ``git clean -d`` 命令删除当前目录下所有没有跟踪过的目录。
+- ``git clean -e <pattern>`` 命令排除( ``--exclude=<pattern>`` ) 某文件或目录，即不删除模式匹配的文件。
+- ``git clean -ffxd`` 命令删除当前目录(包括由其他git仓库管理的子目录)下所有没有跟踪过的目录和文件。
+- ``GIT_CLEAN_FLAGS`` 变量未指定时， ``git clean`` 命令的参数是 ``-ffxd`` 。
+- ``GIT_CLEAN_FLAGS`` 变量指定为 ``none`` 时， ``git clean`` 命令不会执行。
 
-Job stages attempts
+下面示例用于删除未被跟踪文件和目录，但排除cache目录及目录下的文件：
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 2
+
+    variables:
+      GIT_CLEAN_FLAGS: -ffdx -e cache/
+    script:
+      - ls -al cache/
+
+
+作业重试次数 Job stages attempts
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+- 您可以设置正在运行的作业尝试执行以下每个阶段的尝试次数。可以在全局级或作业级进行设置。
 - 涉及三个变量 ``GET_SOURCES_ATTEMPTS`` 、 ``ARTIFACT_DOWNLOAD_ATTEMPTS`` 、 ``RESTORE_CACHE_ATTEMPTS`` 。
+- ``GET_SOURCES_ATTEMPTS`` 变量设置获取源码的尝试次数。
+- ``ARTIFACT_DOWNLOAD_ATTEMPTS`` 变量设置下载归档文件的尝试次数。
+- ``RESTORE_CACHE_ATTEMPTS`` 变量设置重建缓存的尝试次数。
+- 默认是1次尝试。
 
-待补充！！
+示例：
 
-Shallow cloning ``GIT_DEPTH``
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 2
+    
+    variables:
+      GET_SOURCES_ATTEMPTS: 3
+
+
+
+
+浅克隆 Shallow cloning ``GIT_DEPTH``
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-待补充！！
+- GitLab 8.9中引入了试验性的特征 ``浅克隆`` ，在将来的版本中有可能改变或者完全移除。
+- 可以通过设置  ``GIT_DEPTH`` 克隆深度，不详细介绍，可参考 `Shallow cloning <https://docs.gitlab.com/ce/ci/yaml/README.html#shallow-cloning>`_
 
 
 废弃的关键字 ``types`` 和 ``type``
@@ -3193,9 +3232,7 @@ Triggers触发器
 .. image:: ./_static/images/gitlab_bluelog_git_commit_with_git_push_ci_skip_option_trigger_skipped_pipeline.png
 
 
-
-
-
+``.gitlab-ci.yml`` 配置文件各个关键字的使用就介绍到这里。
 
 
 参考：
@@ -3226,3 +3263,4 @@ Triggers触发器
 - `The [runners.custom_build_dir] section <https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-runners-section>`_ 
 - `trigger <https://docs.gitlab.com/ce/ci/yaml/README.html#trigger-premium>`_
 - `Using Git submodules with GitLab CI <https://docs.gitlab.com/ce/ci/git_submodules.html>`_
+- `Shallow cloning <https://docs.gitlab.com/ce/ci/yaml/README.html#shallow-cloning>`_
