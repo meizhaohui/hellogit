@@ -188,7 +188,7 @@ CenOS7安装GitLab(使用外部Nginx配置)
 安装gitlab-ce-11.10.0
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-我们安装11.11.0版本::
+我们安装11.10.0版本::
 
     [root@server ~]# yum install gitlab-ce-11.10.0
     Loaded plugins: fastestmirror
