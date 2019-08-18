@@ -104,7 +104,7 @@ CenOS7安装GitLab(使用外部Nginx配置)
       rich rules: 
     
     # 说明：防火墙放行80端口
-    [root@server ~]# firewall-cmd -zone=public --add-port=80/tcp --permanent
+    [root@server ~]# firewall-cmd --zone=public --add-port=80/tcp --permanent
     success
     
     # 说明：重启防火墙
