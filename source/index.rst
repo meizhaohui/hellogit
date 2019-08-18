@@ -16,3 +16,4 @@ Welcome to hellogit's documentation!
     centos7_install_gitlab_with_external_nginx
     configure_gitlab_i18n_and_create_gitlab_ci_with_gitlab_runner
     gitlab_ci_.gitlab-ci.yml_detail
+    centos7_install_gitlab_with_external_nginx_and_https

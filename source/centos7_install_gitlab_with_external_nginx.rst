@@ -473,13 +473,18 @@ git仓库存储目录默认为 ``/var/opt/gitlab/git-data`` ，由于git仓库�
     uid=1001(git) gid=1001(git) groups=1001(git)
     [root@server ~]# cat /etc/passwd|grep git
     git:x:1001:1001::/home/git:/bin/bash
-    [root@server ~]# ls -lad /home/git/
-    drwx------. 4 git git 111 Jun 22 19:45 /home/git/
-    [root@server ~]# ls -lad /home/git/git-data/
-    drwxr-xr-x. 2 root root 6 Jun 22 19:45 /home/git/git-data/
-    [root@server ~]# chown git:root /home/git/git-data/
-    [root@server ~]# ls -lad /home/git/git-data/       
-    drwxr-xr-x. 2 git root 6 Jun 22 19:45 /home/git/git-data/
+    [root@hellogitlab ~]# ls -lad /home/git/
+    drwx------ 2 git git 62 Aug 18 11:25 /home/git/
+    [root@hellogitlab ~]# mkdir /home/git/git-data/
+    [root@hellogitlab ~]# chown -R git:git /home/git/
+    [root@hellogitlab ~]# ls -la /home/git/          
+    total 12
+    drwx------  3 git  git   78 Aug 18 11:28 .
+    drwxr-xr-x. 4 root root  35 Aug 18 11:25 ..
+    -rw-r--r--  1 git  git   18 Oct 31  2018 .bash_logout
+    -rw-r--r--  1 git  git  193 Oct 31  2018 .bash_profile
+    -rw-r--r--  1 git  git  231 Oct 31  2018 .bashrc
+    drwxr-xr-x  2 git  git    6 Aug 18 11:28 git-data
 
 SMTP外部邮箱设置
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -493,7 +498,7 @@ SMTP的原始信息::
     507 ### GitLab email server settings
     508 ###! Docs: https://docs.gitlab.com/omnibus/settings/smtp.html
     509 ###! **Use smtp instead of sendmail/postfix.**
-    510                                                                                                                                                 
+    510                                             
     511 # gitlab_rails['smtp_enable'] = true
     512 # gitlab_rails['smtp_address'] = "smtp.server"
     513 # gitlab_rails['smtp_port'] = 465
