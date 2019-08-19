@@ -1565,6 +1565,38 @@ httpd 80端口转443端口
 无论是通过配置OpenSSL配置CA中心颁发签名证书还是自签名证书，浏览器都认为证书是 **不安全** 的，推荐使用权威CA中心签发的证书。
 
 
+使用配置文件设置DN数据
+--------------------------------------
+
+下面是一个GitLab中的示例:
+
+.. code-block:: shell
+    :linenos:
+    
+    echo -e "11) Create self ssl files"
+    mkdir -p /etc/nginx/ssl
+    echo -e "Create OpenSSL configuration"
+    cat > req.conf << EOF
+    # The default config file : /etc/pki/tls/openssl.cnf
+    # set prompt = no will read config data from file directly.
+    [ req ]
+    distinguished_name     = req_distinguished_name
+    prompt                 = no
+    
+    [ req_distinguished_name ]
+    countryName            = CN
+    stateOrProvinceName    = hubei
+    localityName           = wuhan
+    0.organizationName     = IT
+    organizationalUnitName = hellogitlab.com
+    commonName             = hellogitlab.com
+    emailAddress           = mzh.whut@gmail.com
+    EOF
+    echo -e "Create self CA"
+    openssl req -x509 -nodes -days 1095 -config req.conf -newkey rsa:2048 -keyout /etc/nginx/ssl/gitlab.key -out /etc/nginx/ssl/gitlab.crt
+
+可参考：OpenSSL主配置文件openssl.cnf https://www.cnblogs.com/f-ck-need-u/p/6091027.html
+
 如果自己有域名并解析到云服务器上，可以使用 ``Let’s Encrypt`` CA中心颁发的证书来构建https服务。可参考 https://letsencrypt.org/zh-cn/getting-started/ 和 https://certbot.eff.org/docs/using.html#where-are-my-certificates 。
 
 使用Let’s Encrypt颁发证书
