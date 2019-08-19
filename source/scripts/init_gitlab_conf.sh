@@ -72,7 +72,7 @@ sed -i "13s@external_url 'http://gitlab.example.com'@external_url \"http://${IP}
 
 echo -e "Step 2: set Time Zone ans Sync Time to time5.aliyun.com IP:182.92.12.11"
 sed -i "49s@^# gitlab_rails\['time_zone'\] = 'UTC'@gitlab_rails\['time_zone'\] = '${TIMEZONE}'@g" "${gitlab_conf}"
-yum install ntp && ntpdate 182.92.12.11 && echo "Time Sync Done!"
+yum install ntp -y && ntpdate 182.92.12.11 && echo "Time Sync Done!"
 
 echo "Step 3: Email Setting"
 sed -i "52s@^# gitlab_rails\['gitlab_email_enabled'\] = true@gitlab_rails\['gitlab_email_enabled'\] = true@g" "${gitlab_conf}"
