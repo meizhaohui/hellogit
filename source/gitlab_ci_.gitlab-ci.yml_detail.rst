@@ -1713,7 +1713,7 @@ Dynamic environments 动态环境
 - 从 ``GitLab 9.0`` 开始， ``cache`` 缓存机制，可以在不同的的流水线或作业之间共享数据。
 - 从 ``GitLab 9.2`` 开始， 在 ``artifacts`` 工件之前恢复缓存。
 - ``cache`` 缓存机制用于指定一系列的文件或文件夹在不同的流水线或作业之间共享数据，仅能使用项目工作空间( ``project workspace`` )中的路径作为缓存的路径。
-- ``如果 ``cache`` 配置的路径是作业工作空间外部，则说明配置是全局的缓存，所有作业共享。
+- 如果 ``cache`` 配置的路径是作业工作空间外部，则说明配置是全局的缓存，所有作业共享。
 - 访问 `Cache dependencies in GitLab CI/CD <https://docs.gitlab.com/ce/ci/caching/index.html>`_ 文档来获取缓存是如何工作的以及好的实践实例的例子。
 - ``cache`` 缓存机制的其他介绍请参考 https://docs.gitlab.com/ce/ci/yaml/README.html#cache 。
 
@@ -1721,7 +1721,7 @@ Dynamic environments 动态环境
 ``artifacts``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- ``artifacts`` 用于指定在作业成功、失败、或者一直等状态下时，一系列的文件或文件夹附加到作业中。``artifacts`` 可以称为 ``工件``或者 ``归档文件`` 。
+- ``artifacts`` 用于指定在作业成功、失败、或者一直等状态下时，一系列的文件或文件夹附加到作业中。``artifacts`` 可以称为 ``工件`` 或者 ``归档文件`` 。
 - 作业完成后，工件被发送到GitLab，可以在GitLab Web界面下载。
 - 默认情况下，只有成功的作业才会生成工件。
 - 并不是所有的 ``executor`` 执行器都支持工件。
