@@ -1,4 +1,10 @@
 # hellogit
+
+
+Archived. Please see the vueblog [vueblog](https://github.com/meizhaohui/vueblog)
+
+
+
 Recording the process of learning Git
 
 
